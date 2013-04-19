@@ -39,9 +39,13 @@ typedef struct List_ {
 *                                                                            *
 *****************************************************************************/
 
-void list_init(List *list, void (*destroy)(void *data),  void(*display)(void *data));
+void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), void (*match)( void * key1, void * key2));
 
 void list_destroy(List *list);
+
+void * list_lookup( List * list, void * data);
+
+void list_travel( List * list);
 
 int list_ins_next(List *list, ListElmt *element, const void *data);
 

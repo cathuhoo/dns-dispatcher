@@ -1,9 +1,6 @@
 #ifndef __HEAD_DNS_RESOLVER__
 #define __HEAD_DNS_RESOLVER__
 
-#define MAX_LINE 1024
-#define MAX_WORD 64
-#define DELIM  "|"
 
 typedef struct _resolver{
         char  name[MAX_WORD];      // the name of the dns resolver
@@ -15,4 +12,6 @@ typedef struct _resolver{
         int openflag; // is it a open resolver ? 
 } Resolver;
 
+int resolver_match( char * resolver_name, Resolver * res);
+void resolver_display( Resolver * res);
 #endif

@@ -2,13 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
 #include "resolvers.h"
 #include "list.h"
+#include "mystring.h"
 
 Resolver * resolver_parse(char * line)
 {
     Resolver * pres;
-    char *tofree, *token, *str;
+    char *tofree, *token, *str, buffer[MAX_WORD];
     int i=0;
 
     if ( line ==NULL)
@@ -20,9 +23,7 @@ Resolver * resolver_parse(char * line)
         return NULL;
     }
     tofree = str = strdup(line);
-    /*
-     * secret|184.22.34.216|5300|5300|burst
-     * tsinghuaa|166.111.8.28|53||CERNET
+    /* secret|184.22.34.216|5300|5300|burst
      * ccert|202.112.57.6:53
      * telecom|219.141.136.10
      */
@@ -32,30 +33,50 @@ Resolver * resolver_parse(char * line)
 
     while ( ( token = strsep(&str, DELIM)) != NULL)
     {
+        strtrim2(buffer, MAX_WORD,token);
         switch (i)
         {
             case 0:
-                strcpy(pres->name, token);
+                strcpy(pres->name, buffer);
                 break;
             case 1:
-                strcpy(pres->ipaddress, token);
+                strcpy(pres->ipaddress, buffer);
                 break;
             case 2 :
-                pres->udp_port =atoi(token);
+                //pres->udp_port =atoi(buffer);
+                pres->udp_port = (int)strtol(buffer, (char **)NULL, 10);
                 break;
             case 3 :
-                pres->tcp_port =atoi(token);
+                //pres->tcp_port =atoi(buffer);
+                pres->tcp_port = (int)strtol(buffer, (char **)NULL, 10);
                 break;
             case 4 :
-                strcpy(pres->isp ,token);
+                strcpy(pres->isp ,buffer);
                 break;
         }
        i++; 
     }
 
+    free(tofree);
+
     return pres;
 }
 
+//return 0: mismatch
+//return 1: match
+//return -1: Error
+int resolver_match( char * resolver_name, Resolver * res)
+{
+    if ( resolver_name ==NULL || res == NULL) 
+    {
+        fprintf(stdout, "Resolver name or point is NULL\n");
+        return -1;
+    } 
+    if ( 0 == strcasecmp(resolver_name, res->name))
+        return 1;
+    else
+        return 0;
+}
 void resolver_display( Resolver * res)
 {
     if(res ==NULL)
@@ -71,14 +92,14 @@ void resolver_display( Resolver * res)
 }
 
 //Load resolvers from a text file into resolver array or link ?
-int load_resolvers(char * source_file, List * resolvers )
+int resolver_load(char * source_file, List * resolvers )
 {
     FILE *fp;
     Resolver *res;
     int num=0;
     char line[MAX_LINE], buffer[MAX_LINE];
 
-    list_init(resolvers, free, (void*)resolver_display);
+    list_init(resolvers, free, (void*)resolver_display, (void *) resolver_match);
 
     if ( (fp=fopen(source_file,"r")) == NULL )
     {
@@ -88,7 +109,7 @@ int load_resolvers(char * source_file, List * resolvers )
     while (fgets(buffer, MAX_LINE, fp))
     {
         num ++;
-        strtrim(line, MAX_LINE, buffer);
+        strtrim2(line, MAX_LINE, buffer);
         if( (line[0] == '#') || (line[0] == ';') || (line[0]=='\n') )
             continue;
 
@@ -98,7 +119,7 @@ int load_resolvers(char * source_file, List * resolvers )
                    num, line);
             return -1;
         } 
-        list_ins_next(resolvers, NULL, res);
+        list_ins_next(resolvers, resolvers->tail, res);
     }
   
    fclose(fp); 
@@ -108,6 +129,7 @@ int load_resolvers(char * source_file, List * resolvers )
 //int connect_resolver( Resolver* resolver);
 //
 
+/*
 int main()
 {
     List resolvers;
@@ -117,5 +139,6 @@ int main()
     list_travel(&resolvers);
     list_destroy(&resolvers);
 }
+*/
 
 

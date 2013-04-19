@@ -9,12 +9,13 @@
 
 #include "list.h"
 
-void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data)) 
+void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), void (*match)( void * key1, void * key2)) 
 {
 
     list->size = 0;
     list->destroy = destroy;
     list->display = display;
+    list->match = match;
     list->head = NULL;
     list->tail = NULL;
     return;
@@ -30,6 +31,23 @@ void list_travel( List * list)
         ptr=ptr->next;
     }
 }
+
+void * list_lookup( List * list, void * data)
+{
+    ListElmt * ptr;
+    ptr = list->head;
+    while (ptr)
+    {
+        if ( 1 == list->match(data, ptr->data)) // match
+        {
+            return ptr->data; 
+        }
+        else
+            ptr = ptr->next;
+    }
+   return NULL;
+}
+
 
 void list_destroy(List *list) 
 {

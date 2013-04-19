@@ -1,7 +1,28 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 
-size_t strtrim(char *out, size_t len, const char *str)
+char * strtrim(char *input)
+{
+    char * start, *end;
+
+    if (input ==NULL)
+        return NULL;
+    start=input;
+            
+    while(isspace(*start)) start++;
+     // Trim trailing space
+     end = input + strlen(input) - 1;
+
+     while(end > start && isspace(*end)) end--;
+     end++;
+     *end = '\0';
+
+     return start;
+}
+
+size_t strtrim2(char *out, size_t len, const char *src)
 {
       if(len == 0)
               return 0;
@@ -10,25 +31,39 @@ size_t strtrim(char *out, size_t len, const char *str)
         size_t out_size;
 
          // Trim leading space
-         while(isspace(*str)) str++;
+         while(isspace(*src)) src++;
            
-         if(*str == 0)  // All spaces?
+         if(*src == 0)  // All spaces?
          {
             *out = 0;
             return 1;
          }
          
          // Trim trailing space
-         end = str + strlen(str) - 1;
-         while(end > str && isspace(*end)) end--;
+         end = src + strlen(src) - 1;
+         while(end > src && isspace(*end)) end--;
          end++;
         
-          // Set output size to minimum of trimmed string length and buffer size minus 1
-          out_size = (end - str) < len-1 ? (end - str) : len-1;
+          // Set output size to minimum of trimmed srcing length and buffer size minus 1
+          out_size = (end - src) < len-1 ? (end - src) : len-1;
           
-           // Copy trimmed string and add null terminator
-           memcpy(out, str, out_size);
+           // Copy trimmed srcing and add null terminator
+           memcpy(out, src, out_size);
            out[out_size] = 0;
            
            return out_size;
 }
+
+/*
+int main( )
+{
+    char input[]=" \t ab cd ef\t gh \t\r\n";
+    char *str;
+
+    printf("Input:%s, length=%d\n", input, strlen(input));
+    str=strtrim(input);
+    printf("After strtrim: %s, length=%d\n", str, strlen(str));
+    printf("After strtrim, input= %s, length=%d\n", input, strlen(input));
+
+}
+*/
