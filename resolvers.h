@@ -1,6 +1,8 @@
 #ifndef __HEAD_DNS_RESOLVER__
 #define __HEAD_DNS_RESOLVER__
 
+#include "common.h"
+#include "list.h"
 
 typedef struct _resolver{
         char  name[MAX_WORD];      // the name of the dns resolver
@@ -14,4 +16,5 @@ typedef struct _resolver{
 
 int resolver_match( char * resolver_name, Resolver * res);
 void resolver_display( Resolver * res);
+int resolver_load(char * source_file, List * resolvers );
 #endif

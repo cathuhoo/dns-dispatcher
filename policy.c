@@ -2,12 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 #include "common.h"
 #include "list.h"
+#include "resolvers.h"
 #include "policy.h"
 #include "mystring.h"
 
 
+int  rule_load_source(Rule * r, IPPrefix *prefix)
+{
+
+}
 void rule_display( Rule * r)
 {
     if(r ==NULL)
@@ -23,6 +29,17 @@ void rule_display( Rule * r)
     printf("\n");
 }
 
+void policy_travel (Policy * policy)
+{
+    int i;
+    if (policy == NULL)
+        return ;
+    for ( i=0; i < policy->size; i++)
+    {
+        rule_display( policy->rules[i]);
+    }
+}
+
 int action_parse( Action * act, char * str, List * resolvers)
 {
     if ( act == NULL || str == NULL)
@@ -35,27 +52,29 @@ int action_parse( Action * act, char * str, List * resolvers)
     else
     {
         op=strtrim(token);
-        if ( 0 ==strncmp(op, "DROP",4) ) 
+        if ( 0 ==strcasecmp(op, "Drop") ) 
         {
             act->op = Drop;
             return 0;
         }
-        if ( 0 ==strncmp(op, "Refuse",6) ) 
+        if ( 0 ==strcasecmp(op, "Refuse") ) 
         {
             act->op = Refuse;
             return 0;
         }
-        if ( 0 ==strncmp(op, "Forward",6) ) 
+        if ( 0 ==strcasecmp(op, "Forward") ) 
         {
             act->op = Forward;
             token = strsep( &str2, DELIM2);
             resolver_name=strtrim(token);
-            Resolver * res = list_lookup( resolver_name, resolvers );
+            Resolver * res = list_lookup(resolvers, resolver_name );
             if (res == NULL)
             {
                 fprintf(stdout, "ERROR: No resolvers found for this rule:%s \n", str);
                 return -1;
             }
+            act->resolver = res;
+            return 0;
         }
         else
         {
@@ -63,12 +82,13 @@ int action_parse( Action * act, char * str, List * resolvers)
             return -1;
         }
     }
+    return -1;
 }
 Rule * rule_parse(char * line , List * resolvers)
 {
     Rule * pr;
     char *tofree, *token, *str, buffer[MAX_WORD];
-    int i=0, result, num;
+    int i=0, result; //, num;
 
     if ( line ==NULL)
         return NULL;
@@ -103,14 +123,14 @@ Rule * rule_parse(char * line , List * resolvers)
                 result = action_parse(&(pr->action), buffer, resolvers);
                 if (result )
                 {
-                    fprintf(stdout, "ERROR: Rule syntax error, at line %d \n", num);
+                    fprintf(stdout, "ERROR: Rule syntax error, unknow action: %s \n", buffer);
                     free(pr);
                     free(tofree);
                     return NULL;
                 }
                 break;
              default :
-                fprintf(stdout, "ERROR: Rule syntax error, at line %d \n", num);
+                fprintf(stdout, "ERROR: Rule syntax error, at line %s \n", buffer);
                 free(pr);
                 free(tofree);
                 return NULL ;
@@ -122,14 +142,18 @@ Rule * rule_parse(char * line , List * resolvers)
     return  pr;
 }
 
-int policy_load( char * policy_file, List * policy, List *resolvers)
+int policy_load( char * policy_file, Policy * policy, List *resolvers)
 {
     FILE * fp;
     Rule * rule;
     int num =0;
     char line[MAX_LINE], buffer[MAX_LINE];
 
-    list_init( policy, free, (void *) rule_display, NULL);
+    //list_init( policy, free, (void *) rule_display, NULL);
+    if (policy == NULL)
+        return -1;
+    policy->size = 0;
+
 
     if( (fp= fopen(policy_file,"r")) == NULL)
     {
@@ -154,7 +178,9 @@ int policy_load( char * policy_file, List * policy, List *resolvers)
                    num, line);
            return -1;
         }
-        list_ins_next(policy, policy->tail, rule);
+        //list_ins_next(policy, policy->tail, rule);
+        policy->rules[ policy->size ] = rule;
+        policy->size ++;
      }
 
     fclose(fp);
@@ -164,10 +190,17 @@ int policy_load( char * policy_file, List * policy, List *resolvers)
 
 int main (int argc, char * argv[])
 {
-    List resolvers, policy;
+    List resolvers;
+    Policy policy;
+    Resolver *res;
 
-    resolver_load("resolvers", &resolvers);
+    resolver_load("resolvers.txt", &resolvers);
     list_travel(&resolvers);
-
+    res= list_lookup(&resolvers, "ccert");
+    resolvers.display(res); 
     policy_load( "policy.txt", &policy, &resolvers);
+    policy_travel( &policy);
+
+    //IPPrefix 
+    return 0;
 }

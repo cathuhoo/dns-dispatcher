@@ -3,6 +3,8 @@
 
 #include "resolvers.h" // Resolver struct is needed
 
+#define MAX_RULES 32
+
 typedef enum _operation { 
     Drop = 1, 
     Refuse = 2,
@@ -19,6 +21,11 @@ typedef struct _rule{
     char dst[MAX_WORD];
     Action action; 
 } Rule;
+
+typedef struct _policy{
+    int size;
+    Rule *rules[MAX_RULES];
+} Policy;
 
 typedef long RuleSet;
 

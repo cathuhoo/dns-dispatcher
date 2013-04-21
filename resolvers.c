@@ -4,8 +4,8 @@
 
 #include "common.h"
 
-#include "resolvers.h"
 #include "list.h"
+#include "resolvers.h"
 #include "mystring.h"
 
 Resolver * resolver_parse(char * line)

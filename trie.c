@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "trie.h"
-#define DEBUG
+
 #define MAX_WORD 64
 
 char * strReverse(char *srcStr, char* dstStr)
@@ -203,8 +203,8 @@ void TrieTravelE( trieNode_t * tree)
 
 void TrieTravel( trieNode_t * tree, char * prefix, int idx)
 {
-    trieNode_t *tPtr;
-    char string[MAX_WORD];
+    //trieNode_t *tPtr;
+    //char string[MAX_WORD];
 
     if( tree  == NULL)
         return ; 
@@ -316,5 +316,6 @@ int TrieLoad(trieNode_t * tree, char * file_name)
         free(tofree);
     }
     fclose(fp);
+    return 0;
 }
 
