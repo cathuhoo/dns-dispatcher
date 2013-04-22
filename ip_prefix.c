@@ -2,8 +2,10 @@
 
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <string.h>
 #include <math.h>
 
+#include "mystring.h"
 #include "ip_prefix.h"
 
 
@@ -44,6 +46,8 @@ int prefix_init( IPPrefix *prefix)
     }
     for (i=0; i< MAX_HASH_32; i++)
         list_init(&prefix->prefix32[i], free, NULL, (void*) prefix_hash_match) ;
+
+    return 0;
 }
 
 int prefix_free( IPPrefix *prefix)
@@ -63,11 +67,14 @@ int prefix_free( IPPrefix *prefix)
         }
         free( prefix -> prefix32);
     }
+
+    return 0;
 }
 
 //given an IP address "addr"(in host order), shift right "32-mask" times  
 int ip_index(long * addr, int mask)
 {
+    //return ((*addr)& 0xFFFFFFFF) >> (32-mask);
     return (*addr) >> (32-mask);
 }
 
@@ -86,7 +93,9 @@ int ipstr_hash(  char  * ipstr)
 }
 long ip_hash( long *addr) // network order
 {
-    unsigned long  hash;
+    long  hash;
+    *addr &=0xFFFFFFFF;
+
     hash = (*addr & 0x0FFFF) ^ ( *addr >> 16);
     hash = hash ^ ( (*addr >>8) & 0x0FFFF);
     return hash;
@@ -94,7 +103,7 @@ long ip_hash( long *addr) // network order
 
 HashItem * ip_hashitem(long *addr, int rule_no) //addr is in network order
 {
-    long idx;
+    //long idx;
     HashItem *pt;
 
     if ( NULL ==( pt = malloc(sizeof( HashItem))))
@@ -145,6 +154,10 @@ int prefix24_add(RuleSet  prefix24[], long * addr, int rule_no)
 long inet_ptoh( char *ipstr, long * addr)
 {
     long lAddr, *ptr;
+
+    if (ipstr == NULL )
+        return -1;
+
     if (addr == NULL)
         ptr = &lAddr;
     else
@@ -158,7 +171,7 @@ long inet_ptoh( char *ipstr, long * addr)
 
     lAddr = ntohl( *ptr);
 
-    return lAddr;
+    return lAddr & 0xFFFFFFFF;
 }
 
 int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
@@ -166,6 +179,9 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
     long  addr_h, addr_n, addr_i, pre;
     int i, sub, p;
 
+#ifdef DEBUG
+    fprintf(stdout, "prefix_add:%s\n", ipstr);
+#endif
     addr_h = inet_ptoh(ipstr, &addr_n);
 
     if (mask == 24) // add it directly in to prefix24
@@ -181,12 +197,13 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
     {
         sub = 24 - mask;
         pre = addr_h & (0xFFFFFFFF << (32-mask)); 
-        p = pow(2, sub);
+        //p = pow(2, sub);
+        p = 1 << sub;
 
         for (i = 0; i < p; i++ )
         {
             addr_i = pre | (i <<8)  ;
-            fprintf(stdout, "addr[%d]:%lx\n", i, addr_i);
+            //fprintf(stdout, "addr[%d]:%lx\n", i, addr_i);
             prefix24_add (prefix->prefix24, &addr_i, rule_no); 
         }
 
@@ -197,11 +214,12 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
 
         pre = addr_h & ( 0xFFFFFFFF << (32-mask));
 
-        p = pow(2, sub);
+        p = 1 << sub;
+
         for ( i =0; i < p; i ++)
         {
             addr_i = pre | i;
-            fprintf(stdout, "addr_[%d]:%lx\n", i, addr_i);
+            //fprintf(stdout, "addr_[%d]:%lx\n", i, addr_i);
             prefix32_add (prefix->prefix32, &addr_i, rule_no); 
         } 
 
@@ -211,6 +229,8 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
         fprintf(stdout, "ERROR: prefix must be less than 32\n");
         return -1;
     }
+
+    return 0;
 
 }
 
@@ -245,6 +265,95 @@ RuleSet* prefix_lookup(IPPrefix *prefix , long * addr )
     }
 }
 
+
+
+int prefix_load(char * file_name, IPPrefix * prefix, int rule_no)
+{
+
+    char buffer[MAX_LINE], line[MAX_LINE];
+    char *ipstr, * pt, *pmask;
+    int mask, num=0;
+
+    if (file_name == NULL || prefix == NULL)
+    {
+        fprintf(stdout, "ERROR: prefix_load : either file_name or prefix is NULL\n");
+        return -1;
+    }
+    
+    FILE * fp;
+    if (  NULL == (fp = fopen(file_name, "r")))
+    {
+        fprintf(stdout, "ERROR: prefix_load: open file: %s failed.\n", file_name);
+        return -1;
+    } 
+
+    while ( fgets(buffer, MAX_LINE, fp))
+    {
+        num ++;
+        strtrim2(line, MAX_LINE, buffer);
+        if( (line[0] == '#') || (line[0] == ';') || (line[0]=='\n') )
+           continue;
+#ifdef DEBUG
+        fprintf(stdout, "DEBUG:%s\n", line);
+#endif
+
+        if ( NULL== (pt=strchr(line, '/')))
+        {
+            mask = 32;
+            ipstr = line;
+        }
+        else
+        {
+            pmask = pt +1 ;
+            mask = (int) strtol(pmask, (char **) NULL, 10  );
+            *pt = '\0';
+            ipstr = line;
+        }
+        prefix_add(prefix , ipstr, mask, rule_no);
+    }
+
+    fclose(fp);
+
+    return 0;
+} 
+
+int prefix_setall(IPPrefix * prefix, int rule_no)
+{
+
+    int i;
+    List * preList, *plist;
+    ListElmt * pElem ;
+    HashItem * ph;
+    RuleSet * rs;
+
+    if (prefix == NULL)
+        return -1;
+    
+    rs = prefix -> prefix24;
+
+    for ( i = 0; i < MAX_HASH_24; i++)
+    {
+        rs[i] = rs[i] | (1 <<rule_no); 
+    }
+
+    preList = prefix -> prefix32 ; 
+
+    for ( i = 0; i < MAX_HASH_32; i++)
+    {
+        plist = &preList[i]; //????????????
+        pElem = plist -> head;
+        while(pElem)
+        {
+            ph = (HashItem *) pElem ->data;
+            if(ph)
+                ph->ruleset |= (1 <<rule_no); 
+            pElem = pElem->next;
+        }
+    }
+    return 0;
+}
+/*
+
 int main(int argc , char * argv[])
 {
     char ipaddress[]  = "1.2.3.4";
@@ -262,20 +371,6 @@ int main(int argc , char * argv[])
 
     prefix_init(&prefix);
     
-    /*
-    inet_pton(AF_INET, ipaddress, &idx); 
-    //idx= &addr;
-
-    printf( "addr:%0lx\n", idx);
-    printf( "addr:%0x\n", ntohl(idx));
-    prefix_add(&prefix, ipaddress, 32, 0);
-    prefix_add(&prefix, ipaddress, 32, 1);
-
-    prefix_add(&prefix, ipaddress, 32, 1);
-    prefix_add(&prefix, ipaddress, 32, 4);
-
-*/
-
     prefix_add(&prefix, ipaddress, atoi(argv[1]), atoi(argv[2]));
     //prefix_add(&prefix, ipaddress2, 32,8);
 
@@ -295,3 +390,4 @@ int main(int argc , char * argv[])
     prefix_free(&prefix);
 
 }
+*/

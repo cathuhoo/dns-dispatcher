@@ -28,4 +28,8 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no);
 
 //RuleSet * prefix_lookup(IPPrefix *prefix, char *ipstr);
 RuleSet* prefix_lookup(IPPrefix *prefix , long * addr );
+int prefix_load(char * file_name, IPPrefix * prefix, int rule_no);
+int prefix_setall(IPPrefix * prefix, int rule_no);
+long inet_ptoh( char *ipstr, long * addr);
+int prefix_free( IPPrefix *prefix);
 #endif

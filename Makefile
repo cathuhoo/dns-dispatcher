@@ -4,8 +4,8 @@ CFLAGS=-c -Wall -g -O0 -DDEBUG
 #include Makefile.inc
 
 CC=gcc
-LDFLAGS=-lresolv -lpthread
-SOURCES=policy.c resolvers.c list.c mystring.c trie.c
+LDFLAGS=-lresolv -lpthread -lm
+SOURCES=policy.c resolvers.c list.c mystring.c trie.c ip_prefix.c
 
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=dns-dispatch
