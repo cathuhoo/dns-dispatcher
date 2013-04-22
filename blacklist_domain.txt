@@ -1,3 +1,4 @@
-www.facebook.com
-www.google.com
-twitter.com
+o.net
+www.face.com
+*twitter.com
+youtube.com

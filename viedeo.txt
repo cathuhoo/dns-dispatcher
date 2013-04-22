@@ -1,2 +1,0 @@
-f.youku.com
-*.sina.com.cn

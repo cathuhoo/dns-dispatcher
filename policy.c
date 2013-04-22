@@ -9,6 +9,7 @@
 #include "policy.h"
 #include "mystring.h"
 #include "ip_prefix.h"
+#include "trie.h"
 
 
 /*
@@ -17,6 +18,19 @@ int  rule_load_source(Rule * r, IPPrefix *prefix)
 
 }
 */
+
+
+int rule_no(RuleSet set)
+{
+    int i;
+
+    for ( i = 0; i< MAX_RULES; i ++)
+    {
+        if ( set & (1<<i) ) 
+          return i;    
+    }
+    return -1;
+}
 void rule_display( Rule * r)
 {
     if(r ==NULL)
@@ -194,8 +208,6 @@ int policy_load_ipprefix( Policy * policy, IPPrefix * ip_prefix)
 {
     int i, count;
     int wildcards[MAX_RULES] ; // process those rules with a "*" as  ip_prefix
-    //RuleSet ruleset;
-
 
     if (policy == NULL || ip_prefix == NULL)
         return -1;
@@ -204,16 +216,6 @@ int policy_load_ipprefix( Policy * policy, IPPrefix * ip_prefix)
         wildcards[i] = -1;
     count=0;
 
-    /*
-    for ( i=0; i < policy->size; i++)
-    {
-        if ( strcmp( "*", policy->rules[i]->src ) == 0 )
-        {
-           wildcards[count] = i;  
-           count ++;
-        }
-    }
-    */
     for ( i=0; i < policy->size; i++)
     {
         if ( strcmp( "*", policy->rules[i]->src ) == 0 )
@@ -239,6 +241,50 @@ int policy_load_ipprefix( Policy * policy, IPPrefix * ip_prefix)
     }
     return 0;
 }
+int policy_load_domain( Policy * policy, trieNode_t * trie)
+{
+    int i, count;
+    int wildcards[MAX_RULES] ; // process those rules with a "*" as  ip_prefix
+
+    if (policy == NULL || trie == NULL)
+        return -1;
+
+    for ( i= 0; i < MAX_RULES; i ++)
+        wildcards[i] = -1;
+
+    count=0;
+
+    for ( i=0; i < policy->size; i++)
+    {
+        if ( strcmp( "*", policy->rules[i]->dst ) == 0 )
+        {
+           wildcards[count] = i;  
+           count ++;
+        }
+        else 
+        {
+            int rcode = TrieLoad(trie, policy->rules[i]->dst, i);
+            if (rcode == -1)
+            {
+                fprintf(stdout, "ERROR: policy_load_domain, rule #%d\n", i);
+                return -1;
+            }
+        }
+    }
+    
+    //add those wildcard (*)
+    RuleSet set=0;
+    for (i=0; i < count ; i++)
+    {
+        set = set | ( 1<< wildcards[i]);
+    }
+    if(set) 
+    {
+        trie_setall(trie , set );
+        TrieAdd(&trie, "*", set); 
+    }
+    return 0;
+}
 
 int main (int argc, char * argv[])
 {
@@ -247,7 +293,7 @@ int main (int argc, char * argv[])
     Resolver *res;
     IPPrefix ip_prefix;
     long addr_h;
-    RuleSet *rs;
+    RuleSet *rs=NULL;
     char *ipaddress;
 
     if(argc <2) 
@@ -255,30 +301,75 @@ int main (int argc, char * argv[])
         fprintf(stderr, "Usage: %s <ip address> \n", argv[0]);
         exit(-1);
     }
+
+    //Load resolvers
     resolver_load("resolvers.txt", &resolvers);
     list_travel(&resolvers);
+
+    //test : lookup a resolver
     res= list_lookup(&resolvers, "ccert");
     resolvers.display(res); 
 
+    //Load Policy
     policy_load( "policy.txt", &policy, &resolvers);
     policy_travel( &policy);
 
+    //load IP prefix in the policy
     prefix_init(&ip_prefix);
-
     policy_load_ipprefix( &policy, &ip_prefix); 
 
-    //policy_load_domain( &policy, &dn_sufix);
-
+    // To lookup some IP address :
     ipaddress=argv[1];
     addr_h = inet_ptoh(ipaddress, NULL);
     addr_h &= 0xFFFFFFFF;
 
-    printf("inet_ptoh %s addr_h=0x%lx\n", ipaddress, addr_h);
 
     rs = prefix_lookup( &ip_prefix, &addr_h);
     printf("Lookup for %s rs=0x%lx\n", ipaddress, *rs);
 
+    //////////////////////////////////////////
+    //Load Domain in the policy
+    trieNode_t * srch=NULL;
+    trieNode_t * trie_dn = TrieInit();
+    policy_load_domain(&policy, trie_dn);
+
+    printf("Trie Travel:\n");
+    TrieTravelE(trie_dn);
+
+    // To lookup some domain names: 
+    RuleSet rs2=0;
+    if ( argc >=3 )
+    {
+        /*char str_r[MAX_WORD];
+        char *pstr = strtrim(argv[2]);
+        char buffer[]="This is a buffer";
+
+        strReverse(pstr, str_r);
+
+        fprintf(stdout, "before search: srch=%lx\n", srch);
+        */
+        srch = trie_search (trie_dn, argv[2]); ///???????????????????????????
+        if( srch == NULL)
+        {
+            fprintf(stdout, "Domain Name:%s not found in trie\n", argv[2]);
+        }
+        else
+        {
+            rs2=srch->value;
+            fprintf(stdout, "Domain Name:%s  found in trie, value:0x%lx\n", argv[2], rs2);
+        }
+        
+    }
+    if (rs!= NULL && rs2 != 0 ) 
+    {
+        RuleSet rsu =  (*rs) & rs2;
+        int ruleNum = rule_no(rsu); 
+        fprintf(stdout, "set in ip prefix:0x%lx ;  set in domain:0x%lx , matched rule number:%d\n",
+                *rs, rs2, ruleNum) ;
+    }
+
     prefix_free(&ip_prefix);
+    trie_free(trie_dn);
     //IPPrefix 
     return 0;
 }

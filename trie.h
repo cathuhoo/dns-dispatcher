@@ -1,7 +1,9 @@
 #ifndef  __TRIE_H__
 #define  __TRIE_H__
 
-typedef int trieVal_t;
+#include "policy.h"
+
+typedef RuleSet trieVal_t;
 
 typedef struct trieNode{
     char key;
@@ -12,7 +14,9 @@ typedef struct trieNode{
     struct trieNode *children;
 } trieNode_t;
 
+trieNode_t * TrieInit( );
 trieNode_t * TrieSearch(trieNode_t * root, const char *key);
+trieNode_t * trie_search(trieNode_t * root, const char *key);
 void TrieTravel( trieNode_t * tree, char * prefix, int idx);
 void TrieRemove(trieNode_t ** root, char * key);
 

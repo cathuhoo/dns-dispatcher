@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "trie.h"
+#include "mystring.h"
 
 #define MAX_WORD 64
 
@@ -47,46 +48,38 @@ trieNode_t * TrieInit( )
 
 void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
 { 
-    trieNode_t * pTrav = NULL;
+    trieNode_t * pTrav = NULL, *pFound;
 
     if( NULL == * root) 
     {
         printf("NULL Tree \n");
         return ;
     }
-    #ifdef DEBUG
-        printf("Now begin to insert key %s:\n", key);
-    #endif
     pTrav = (*root) -> children;
 
-    if (TrieSearch(pTrav, key))
+    if (NULL != (pFound = TrieSearch(pTrav, key)))
     {
-        printf("Duplicated !\n");
-        return ;
+        //printf("Duplicated !\n");
+        // Unionify 
+        pFound->value |= data ;
+        return ; 
     }
 
     if(pTrav == NULL )
     {
         /*first node */
-        #ifdef DEBUG
-            printf("First node\n");
-        #endif
-
         for ( pTrav = * root ; *key; pTrav = pTrav -> children)
         {
             pTrav -> children = TrieCreateNode ( *key , 0xffffffff);
             pTrav -> children->parent = pTrav;
             #ifdef DEBUG
-                printf("\t Inserting: %c \n", pTrav->children->key);
+                //printf("\t Inserting: %c \n", pTrav->children->key);
             #endif
             key ++;
         }
 
         pTrav->children = TrieCreateNode (ENDCHAR, data);
         pTrav->children->parent = pTrav;
-        #ifdef DEBUG
-            printf("\t Inserting: %c(END)\n", pTrav->children->key);
-        #endif
         return;
     }
 
@@ -97,7 +90,7 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
         {
             key ++;
             #ifdef DEBUG
-                printf("\t Traversing child: %c \n", pTrav->children->key);
+                //printf("\t Traversing child: %c \n", pTrav->children->key);
             #endif
             pTrav = pTrav ->children;
         }
@@ -124,7 +117,7 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
     pTrav->next->prev = pTrav;
 
     #ifdef DEBUG
-        printf("\t Inserting %c as neighbour of %c \n", pTrav->next->key,pTrav->key);
+        //printf("\t Inserting %c as neighbour of %c \n", pTrav->next->key,pTrav->key);
     #endif
 
     key++;
@@ -135,7 +128,7 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
         pTrav->children = TrieCreateNode(*key, 0xffffffff);
         pTrav->children->parent = pTrav;
         #ifdef DEBUG
-            printf("\t Inserting: %c \n", pTrav->children->key);
+            //printf("\t Inserting: %c \n", pTrav->children->key);
         #endif
         key++;
     }
@@ -143,11 +136,42 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
     pTrav->children = TrieCreateNode(ENDCHAR, data);
     pTrav->children->parent = pTrav;
     #ifdef DEBUG
-        printf("\t Inserting: %c\n",pTrav->children->key);
+        //printf("\t Inserting: %c\n",pTrav->children->key);
     #endif
     return;
 }
 
+// search reverse of key, from trie root
+trieNode_t* trie_search(trieNode_t * root, const char *key)
+{
+    trieNode_t * pt = NULL;
+    char str_r[MAX_WORD], str_trim[MAX_WORD];
+
+    if ( root == NULL)
+        return NULL;
+
+    strtrim2(str_trim, MAX_WORD, key);
+
+    strReverse(str_trim, str_r);
+
+    pt = TrieSearch(root->children, str_r);
+
+    if (pt)
+    {
+        //fprintf(stdout, "pt:%lx\n", pt);
+        //fprintf(stdout, "*pt->value:%lx\n", pt->value);
+        return pt;
+    }
+    else
+    {
+        pt = TrieSearch(root->children, "*");
+        if (pt)
+            return pt;
+    }
+    return NULL;
+    
+}
+//search from the children of trie root
 trieNode_t* TrieSearch(trieNode_t *root, const char *key)
 {
     trieNode_t *level = root;
@@ -203,11 +227,10 @@ void TrieTravelE( trieNode_t * tree)
 
 void TrieTravel( trieNode_t * tree, char * prefix, int idx)
 {
-    //trieNode_t *tPtr;
-    //char string[MAX_WORD];
 
     if( tree  == NULL)
         return ; 
+
     if ( tree-> key != ENDCHAR)
     {
         *(prefix + idx)  = tree->key; 
@@ -216,7 +239,7 @@ void TrieTravel( trieNode_t * tree, char * prefix, int idx)
     else 
     {
         *(prefix + idx)  = ENDCHAR; 
-        printf("%s$:%d\n", prefix, tree->value);
+        printf("%s$:%lx\n", prefix, tree->value);
         //return ;
     }
 
@@ -225,6 +248,37 @@ void TrieTravel( trieNode_t * tree, char * prefix, int idx)
     if ( tree->next)
         TrieTravel( tree->next, prefix,idx);
 
+}
+void trie_free( trieNode_t * tree)
+{
+
+    if( tree  == NULL)
+        return ; 
+
+    if ( tree->children)
+        trie_free( tree->children); 
+    if ( tree->next)
+        trie_free( tree->next);
+
+    if(tree->parent)
+        tree->parent->children = NULL; 
+    free(tree);
+}
+int trie_setall(trieNode_t * tree, RuleSet set)
+{
+    if( tree  == NULL)
+        return 0 ; 
+
+    if ( tree-> key == ENDCHAR)
+    {
+        tree->value |= set;
+    }
+
+    if ( tree->children)
+        trie_setall( tree->children, set);
+    if ( tree->next)
+        trie_setall( tree->next, set);
+    return 0;
 }
 void TrieRemove(trieNode_t ** root, char * key)
 {
@@ -276,14 +330,13 @@ void TrieRemove(trieNode_t ** root, char * key)
     }
 
 }
-int TrieLoad(trieNode_t * tree, char * file_name)
+int TrieLoad(trieNode_t * tree, char * file_name, int rule_no)
 {
     char line[MAX_WORD];
-    char * str, *token, *tofree;
+    char * str; 
     FILE * fp;
-    char * name;
     char r_name[MAX_WORD];
-    int  val, set, tmp;
+    RuleSet set;
 
     if ( (fp=fopen(file_name, "r") )==NULL)
     {
@@ -293,29 +346,56 @@ int TrieLoad(trieNode_t * tree, char * file_name)
     while( fgets(line, MAX_WORD, fp) != NULL )
     {
         set = 0x0;
-        printf("input:%s\n", line);
-        if (line[0] == '#' || line[0] =='\0' || line[0] == ';')
+        str=strtrim(line);
+
+        if (str[0] == '#' || str[0] =='\0' || str[0] == ';')
             continue;
-        tofree = str = strdup(line);
-        name = strsep(&str, ":"); 
-        
-        while ( (token = strsep(&str,":")) != NULL)
-        {
-            #ifdef DEBUG
-                printf("token:%s\n", token);
-            #endif
-            val = atoi(token );
-            tmp = (1<< val); 
-            set = set | tmp;
-            #ifdef DEBUG
-                printf("set=:%d\n", set);
-            #endif
-        } 
-        strReverse(name, r_name);
+        set = 1<< rule_no;
+
+        strReverse(str, r_name);
         TrieAdd(&tree, r_name, set); 
-        free(tofree);
+        //free(tofree);
     }
     fclose(fp);
+
     return 0;
 }
 
+
+/*
+// To test the code related to trie
+//
+int main ( int argc , char * argv[])
+{
+    trieNode_t *tree;
+    trieNode_t *srch; 
+    char * str, tmpStr[MAX_WORD], str_r[MAX_WORD];
+    int i;
+
+    //tree = TrieCreateNode( ENDCHAR, 0xffffffff);
+
+    trieNode_t * tree_ip, *tree_domain;
+    tree_ip = TrieInit();
+    printf("Load domain: blacklist_domain.txt\n");
+    TrieLoad( tree_ip, "blacklist_domain.txt", 1);
+    printf("Load domain: video.txt\n");
+    TrieLoad( tree_ip, "video.txt", 2);
+    printf("Trie Travel:\n");
+    TrieTravelE(tree_ip);
+    for ( i=1; i < argc ; i++) 
+    {
+        str = argv[i];
+        strReverse(str, str_r);
+        srch = TrieSearch ( tree_ip->children, str_r);
+        //srch = TrieSearch ( tree, str);
+        if (srch == NULL)
+        {
+            printf("%s not found \n", str);
+        }
+        else
+        {
+            printf("%s found, value:0x%lx \n", str, srch->value);
+        }
+    }
+}
+*/

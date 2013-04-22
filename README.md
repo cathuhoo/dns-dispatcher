@@ -1,7 +1,9 @@
 dns-dispatcher
 ==============
 Dispatcher is a DNS forwarder, which forwards DNS queries to different DNS resolvers 
-according to local policy. The example of such policy file is following:
+according to local policy, to improve the performance availability or reliability of DNS resolving   
+
+The example of such policy file is following:
 
 ###### Example of a policy file ###############
 # A policy file is a text file contains rules 
@@ -28,3 +30,5 @@ cernet_ip.txt| video.txt| Forward: ccert
 # For any other request, forward to a default DNS resolver, ccert
 *| * | Forward: ccert 
 
+
+Contact or bug report to:  cathuhoo At Gmail
