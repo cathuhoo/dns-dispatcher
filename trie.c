@@ -7,6 +7,8 @@
 
 #define MAX_WORD 64
 
+#define DEFAULT_VALUE 0x0
+
 char * strReverse(char *srcStr, char* dstStr)
 {
         int i, length;
@@ -43,7 +45,8 @@ trieNode_t *TrieCreateNode( char key, trieVal_t data)
 
 trieNode_t * TrieInit( )
 {
-    return TrieCreateNode( ENDCHAR, 0xffffffff);
+    //return TrieCreateNode( ENDCHAR, 0xffffffff);
+    return TrieCreateNode( ENDCHAR, DEFAULT_VALUE);
 }
 
 void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
@@ -70,7 +73,8 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
         /*first node */
         for ( pTrav = * root ; *key; pTrav = pTrav -> children)
         {
-            pTrav -> children = TrieCreateNode ( *key , 0xffffffff);
+            //pTrav -> children = TrieCreateNode ( *key , 0xffffffff);
+            pTrav -> children = TrieCreateNode ( *key , DEFAULT_VALUE);
             pTrav -> children->parent = pTrav;
             #ifdef DEBUG
                 //printf("\t Inserting: %c \n", pTrav->children->key);
@@ -112,7 +116,8 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
     }
 
     //Now, create a new node, and add it to the rightmost of siblings
-    pTrav->next = TrieCreateNode( *key, 0xffffffff);
+    //pTrav->next = TrieCreateNode( *key, 0xffffffff);
+    pTrav->next = TrieCreateNode( *key, DEFAULT_VALUE);
     pTrav->next->parent = pTrav->parent;
     pTrav->next->prev = pTrav;
 
@@ -125,7 +130,8 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
     //Now create a new chain for the rest of string 
     for(pTrav = pTrav->next; *key; pTrav = pTrav->children)
     {
-        pTrav->children = TrieCreateNode(*key, 0xffffffff);
+        //pTrav->children = TrieCreateNode(*key, 0xffffffff);
+        pTrav->children = TrieCreateNode(*key, DEFAULT_VALUE);
         pTrav->children->parent = pTrav;
         #ifdef DEBUG
             //printf("\t Inserting: %c \n", pTrav->children->key);

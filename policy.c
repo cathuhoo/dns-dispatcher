@@ -12,14 +12,6 @@
 #include "trie.h"
 
 
-/*
-int  rule_load_source(Rule * r, IPPrefix *prefix)
-{
-
-}
-*/
-
-
 int rule_no(RuleSet set)
 {
     int i;
@@ -340,14 +332,6 @@ int main (int argc, char * argv[])
     RuleSet rs2=0;
     if ( argc >=3 )
     {
-        /*char str_r[MAX_WORD];
-        char *pstr = strtrim(argv[2]);
-        char buffer[]="This is a buffer";
-
-        strReverse(pstr, str_r);
-
-        fprintf(stdout, "before search: srch=%lx\n", srch);
-        */
         srch = trie_search (trie_dn, argv[2]); ///???????????????????????????
         if( srch == NULL)
         {
