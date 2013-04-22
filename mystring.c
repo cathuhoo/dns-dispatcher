@@ -3,6 +3,21 @@
 #include <ctype.h>
 #include <string.h>
 
+
+char * strReverse(char *srcStr, char* dstStr)
+{
+    int i, length;
+    if (srcStr == NULL || dstStr == NULL)
+            return NULL;
+
+    length = strlen(srcStr);
+    for ( i =0; i < length; i++)
+            dstStr[i] = srcStr[length - i - 1 ];
+    dstStr[length] = '\0';
+
+    return dstStr;
+}
+
 char * strtrim(char *input)
 {
     char * start, *end;

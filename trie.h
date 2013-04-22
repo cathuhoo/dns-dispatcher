@@ -21,6 +21,6 @@ void TrieTravel( trieNode_t * tree, char * prefix, int idx);
 void TrieRemove(trieNode_t ** root, char * key);
 
 #define ENDCHAR '\0'
-#define WILDCAST '*'
+#define WILDCARD '*'
 
 #endif

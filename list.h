@@ -38,7 +38,7 @@ typedef struct List_ {
 *                                                                            *
 *****************************************************************************/
 
-void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), void (*match)( void * key1, void * key2));
+void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), int (*match)( void * key1, void * key2));
 
 void list_destroy(List *list);
 

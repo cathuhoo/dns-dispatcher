@@ -9,19 +9,6 @@
 
 #define DEFAULT_VALUE 0x0
 
-char * strReverse(char *srcStr, char* dstStr)
-{
-        int i, length;
-            if (srcStr == NULL || dstStr == NULL)
-                        return NULL;
-
-                length = strlen(srcStr);
-                    for ( i =0; i < length; i++)
-                                dstStr[i] = srcStr[length - i - 1 ];
-                        dstStr[length] = '\0';
-
-                            return dstStr;
-}
 
 trieNode_t *TrieCreateNode( char key, trieVal_t data)
 {
@@ -197,8 +184,8 @@ trieNode_t* TrieSearch(trieNode_t *root, const char *key)
                 lvl ++;
                 break;
             }
-            else if( curr->key == WILDCAST ) 
-                // WILDCAST(*) will match any characters
+            else if( curr->key == WILDCARD ) 
+                // WILDCARD(*) will match any characters
             {
                 return curr-> children; 
             }

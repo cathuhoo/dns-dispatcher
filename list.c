@@ -9,13 +9,13 @@
 
 #include "list.h"
 
-void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), void (*match)( void * key1, void * key2)) 
+void list_init(List *list, void (*destroy)(void *data), void (*display)(void *data), int (*match)( void * key1, void * key2)) 
 {
 
     list->size = 0;
     list->destroy = destroy;
     list->display = display;
-    list->match = match;
+    list->match =  match;
     list->head = NULL;
     list->tail = NULL;
     return;
