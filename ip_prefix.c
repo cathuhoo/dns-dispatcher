@@ -74,8 +74,8 @@ int prefix_free( IPPrefix *prefix)
 //given an IP address "addr"(in host order), shift right "32-mask" times  
 int ip_index(long * addr, int mask)
 {
-    //return ((*addr)& 0xFFFFFFFF) >> (32-mask);
-    return (*addr) >> (32-mask);
+    return ((*addr)& 0xFFFFFFFF) >> (32-mask);
+    //return (*addr) >> (32-mask);
 }
 
 int ipstr_hash(  char  * ipstr)
@@ -98,7 +98,7 @@ long ip_hash( long *addr) // network order
 
     hash = (*addr & 0x0FFFF) ^ ( *addr >> 16);
     hash = hash ^ ( (*addr >>8) & 0x0FFFF);
-    return hash;
+    return hash & 0xFFFF;
 }
 
 HashItem * ip_hashitem(long *addr, int rule_no) //addr is in network order

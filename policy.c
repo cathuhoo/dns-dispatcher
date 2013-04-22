@@ -250,6 +250,11 @@ int main (int argc, char * argv[])
     RuleSet *rs;
     char *ipaddress;
 
+    if(argc <2) 
+    {
+        fprintf(stderr, "Usage: %s <ip address> \n", argv[0]);
+        exit(-1);
+    }
     resolver_load("resolvers.txt", &resolvers);
     list_travel(&resolvers);
     res= list_lookup(&resolvers, "ccert");
