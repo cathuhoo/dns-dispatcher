@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "common.h"
 #include "mystring.h"
 #include "ip_prefix.h"
 

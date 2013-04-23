@@ -17,4 +17,7 @@ typedef struct _resolver{
 int resolver_match( char * resolver_name, Resolver * res);
 void resolver_display( Resolver * res);
 int resolver_load(char * source_file, List * resolvers );
+
+#define resolver_free(res) list_destroy(res)
+#define resolver_travel(res) list_travel(res)
 #endif

@@ -5,7 +5,8 @@ CFLAGS=-c -Wall -g -O0 -DDEBUG
 
 CC=gcc
 LDFLAGS=-lresolv -lpthread -lm
-SOURCES=policy.c resolvers.c list.c mystring.c trie.c ip_prefix.c
+SOURCES=policy.c resolvers.c list.c mystring.c trie.c ip_prefix.c main.c config.c ini.c 
+
 
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=dns-dispatch

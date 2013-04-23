@@ -2,8 +2,8 @@
 #ifndef __IP_PREFIX_H__
 #define __IP_PREFIX_H__
 
-#include "policy.h"
-#include "list.h"
+#include "list.h"   //List
+#include "common.h" // RuleSet
 
 #define MAX_HASH_24 256*256*256
 #define MAX_HASH_32 256*256

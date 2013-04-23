@@ -4,12 +4,12 @@
 
 
 #include "common.h"
-#include "list.h"
-#include "resolvers.h"
-#include "policy.h"
 #include "mystring.h"
+//#include "list.h"
+//#include "resolvers.h"
 #include "ip_prefix.h"
 #include "trie.h"
+#include "policy.h"
 
 
 int rule_no(RuleSet set)
@@ -151,17 +151,30 @@ Rule * rule_parse(char * line , List * resolvers)
     return  pr;
 }
 
+int policy_free(Policy *policy)
+{
+    int i;
+    for (i= 0; i< policy->size; i++)
+    {
+        if(policy->rules[i]) 
+            free(policy->rules[i]);
+    }
+    return 0;
+}
 int policy_load( char * policy_file, Policy * policy, List *resolvers)
 {
     FILE * fp;
     Rule * rule;
-    int num =0;
+    int num =0, i;
     char line[MAX_LINE], buffer[MAX_LINE];
 
     //list_init( policy, free, (void *) rule_display, NULL);
     if (policy == NULL)
         return -1;
+
     policy->size = 0;
+    for ( i=0; i< MAX_RULES; i++)
+        policy->rules[i] = NULL;
 
 
     if( (fp= fopen(policy_file,"r")) == NULL)
@@ -277,7 +290,7 @@ int policy_load_domain( Policy * policy, trieNode_t * trie)
     }
     return 0;
 }
-
+/*
 int main (int argc, char * argv[])
 {
     List resolvers;
@@ -290,7 +303,7 @@ int main (int argc, char * argv[])
 
     if(argc <2) 
     {
-        fprintf(stderr, "Usage: %s <ip address> \n", argv[0]);
+        fprintf(stderr, "Usage: %s <ip_address> [domain_name]\n", argv[0]);
         exit(-1);
     }
 
@@ -354,6 +367,6 @@ int main (int argc, char * argv[])
 
     prefix_free(&ip_prefix);
     trie_free(trie_dn);
-    //IPPrefix 
     return 0;
 }
+*/

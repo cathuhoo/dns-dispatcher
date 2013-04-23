@@ -2,6 +2,9 @@
 #define __HEAD_DNS_DISPATCHER__
 
 #include "resolvers.h" // Resolver struct is needed
+#include "ip_prefix.h" //IPPrefix struct
+#include "list.h"      //List 
+#include "trie.h"
 
 #define MAX_RULES 32
 
@@ -27,11 +30,16 @@ typedef struct _policy{
     Rule *rules[MAX_RULES];
 } Policy;
 
-typedef long RuleSet;
 
-#define CLEARSET(s)  s = s & 0x0
+//#define CLEARSET(s)  s = s & 0x0
 
 //Add element to set. Here element must little than length of RuleSet (for long int, 32)
-#define ADDTOSET(set, element)  set = set | (1 << element) 
+//#define ADDTOSET(set, element)  set = set | (1 << element) 
+
+void policy_travel (Policy * policy);
+int policy_free(Policy *policy);
+int policy_load( char * policy_file, Policy * policy, List *resolvers);
+int policy_load_ipprefix( Policy * policy, IPPrefix * ip_prefix);
+int policy_load_domain( Policy * policy, trieNode_t * trie);
 
 #endif

@@ -8,6 +8,7 @@
 #include "resolvers.h"
 #include "mystring.h"
 
+
 Resolver * resolver_parse(char * line)
 {
     Resolver * pres;
@@ -125,6 +126,7 @@ int resolver_load(char * source_file, List * resolvers )
    fclose(fp); 
    return 0; 
 }
+
 
 //int connect_resolver( Resolver* resolver);
 //

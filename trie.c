@@ -1,4 +1,3 @@
-/* trie.c */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -232,7 +231,7 @@ void TrieTravel( trieNode_t * tree, char * prefix, int idx)
     else 
     {
         *(prefix + idx)  = ENDCHAR; 
-        printf("%s$:%lx\n", prefix, tree->value);
+        printf("%s$:0x%lx\n", prefix, tree->value);
         //return ;
     }
 
