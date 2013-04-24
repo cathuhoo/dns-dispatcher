@@ -134,7 +134,7 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
 }
 
 // search reverse of key, from trie root
-trieNode_t* trie_search(trieNode_t * root, const char *key)
+trieVal_t * trie_search(trieNode_t * root, const char *key)
 {
     trieNode_t * pt = NULL;
     char str_r[MAX_WORD], str_trim[MAX_WORD];
@@ -152,13 +152,13 @@ trieNode_t* trie_search(trieNode_t * root, const char *key)
     {
         //fprintf(stdout, "pt:%lx\n", pt);
         //fprintf(stdout, "*pt->value:%lx\n", pt->value);
-        return pt;
+        return &pt->value;
     }
     else
     {
         pt = TrieSearch(root->children, "*");
         if (pt)
-            return pt;
+            return &pt->value;
     }
     return NULL;
     

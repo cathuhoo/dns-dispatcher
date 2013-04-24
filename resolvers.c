@@ -78,6 +78,21 @@ int resolver_match( char * resolver_name, Resolver * res)
     else
         return 0;
 }
+int  resolver_connect( Resolver * res)
+{
+    int sock_fd;
+    if(res ==NULL)
+    {
+        fprintf(stdout, "Error: NULL resolver\n");
+        return -1;
+    }
+    printf("try to connect:%s | ", res->name);
+
+    //TODO;
+    //
+
+    return 1; 
+}
 void resolver_display( Resolver * res)
 {
     if(res ==NULL)

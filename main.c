@@ -55,13 +55,11 @@ void usage(char * self_name)
 Configuration config;
 List resolvers;
 Policy policy;
-Resolver *res;
-IPPrefix ip_prefix;
-trieNode_t * trie_dn ;
 
 int main(int argc, char* argv[])
 {
     int oc;
+    int error=0;
 
     config_set_default(&config);
 
@@ -126,36 +124,60 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: load configuration file failed: %s.\n", config.file_config);
         exit(-1);
     }
+
+
     config_display(&config);
 
     if(config.file_resolvers)
     {
         resolver_load(config.file_resolvers, &resolvers);
+        #ifdef DEBUG
+            resolver_travel(&resolvers);
+        #endif
     }
-    resolver_travel(&resolvers);
+    else
+    {
+        fprintf(stderr, "ERROR: No DNS resolvers found \n");    
+        error=1;
+    }
 
     if(NULL == config.file_policy)
     {
-        fprintf(stderr, "ERROR: no policy file \n");    
+        my_log(config.fd_log, "ERROR: no policy file in config file \n");    
+        error=1;
     }
     else
     {
         policy_load( "policy.txt", &policy, &resolvers);
-        policy_travel( &policy);
-        prefix_init(&ip_prefix);
-
-        policy_load_ipprefix(&policy, &ip_prefix);
-
-        trie_dn = TrieInit();
-        policy_load_domain(&policy, trie_dn);
-        printf("Trie Travel:\n");
-        TrieTravelE(trie_dn);
+        #ifdef DEBUG
+            policy_travel( &policy);
+            TrieTravelE(policy.trie_dn);
+        #endif
+        
     }
-    
-    trie_free(trie_dn);
+    if (!error)
+    {
+        #ifdef DEBUG
+            long addr_h = inet_ptoh("166.111.1.1", NULL);
+            Action * pa = policy_lookup(&policy, addr_h, "mail.google.com");
+            printf("returned address pa=%p \n", pa);
+            if (pa != NULL)
+            {
+                printf("op:%d\n",pa->op);
+                printf("re:%s\n", pa->resolver->name);
+            }
+        #endif
+
+        //This is the main loop, which :
+        //  (1) recieves DNS queries from downstream client(users), and dispatches them to resolver_selectors ;  
+        //  (2) receives DNS replies from upstream   
+        recv_and_send(&policy, &resolvers, &config);
+    }
+        
+    //Free all the memory
+    //trie_free(policy.trie_dn);
     resolver_free(&resolvers);
     policy_free(&policy);
-
     config_free(&config);
     return 0;
 }
