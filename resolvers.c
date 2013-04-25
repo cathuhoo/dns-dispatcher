@@ -78,9 +78,10 @@ int resolver_match( char * resolver_name, Resolver * res)
     else
         return 0;
 }
+/*
 int  resolver_connect( Resolver * res)
 {
-    int sock_fd;
+    //int sock_fd;
     if(res ==NULL)
     {
         fprintf(stdout, "Error: NULL resolver\n");
@@ -93,6 +94,7 @@ int  resolver_connect( Resolver * res)
 
     return 1; 
 }
+*/
 void resolver_display( Resolver * res)
 {
     if(res ==NULL)
@@ -107,15 +109,24 @@ void resolver_display( Resolver * res)
     printf("\n");
 }
 
+void resolver_list_init( ResolverList *rl, void (*match)( void * key1, void * key2), void (*display)(void *data)  )
+{
+    if (NULL == rl)
+        return ;
+    rl->size =0;
+    rl->match = match;
+    rl->display = display;
+}
+
 //Load resolvers from a text file into resolver array or link ?
-int resolver_load(char * source_file, List * resolvers )
+int resolver_list_load(char * source_file, ResolverList * resolvers )
 {
     FILE *fp;
     Resolver *res;
     int num=0;
     char line[MAX_LINE], buffer[MAX_LINE];
 
-    list_init(resolvers, free, (void*)resolver_display, (void *) resolver_match);
+    resolver_list_init(resolvers, (void *) resolver_match, (void*)resolver_display);
 
     if ( (fp=fopen(source_file,"r")) == NULL )
     {
@@ -135,13 +146,53 @@ int resolver_load(char * source_file, List * resolvers )
                    num, line);
             return -1;
         } 
-        list_ins_next(resolvers, resolvers->tail, res);
+        //list_ins_next(resolvers, resolvers->tail, res);
+
+        resolvers->resolvers[resolvers->size] = res;
+        resolvers->size ++; 
     }
   
    fclose(fp); 
    return 0; 
 }
+Resolver * resolver_list_lookup(ResolverList *rl, char *resolver_name )
+{
+    int i;
+    Resolver * res;
+    for (i=0; i < rl->size; i++)
+    {
+        res= rl->resolvers[i];
+        if (res)
+        {
+             if ( 0 == strcasecmp(resolver_name, res->name))
+                 return res;
+        }
+        else
+        {
+            //error
+        }
+    }
+}
+void resolver_list_travel(ResolverList *rl) 
+{
+  int i;
 
+  for (i=0; i < rl->size; i++)
+     rl->display(rl->resolvers[i]);
+
+}
+
+void resolver_list_free(ResolverList *rl) 
+{
+    if (rl == NULL)
+        return ;
+    int i;
+    for ( i = 0 ; i < rl->size ; i++)
+    {
+      if( rl->resolvers[i] )
+        free( rl->resolvers[i]);
+    }
+}
 
 //int connect_resolver( Resolver* resolver);
 //

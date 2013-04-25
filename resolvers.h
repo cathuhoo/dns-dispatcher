@@ -12,14 +12,32 @@ typedef struct _resolver{
         char  isp[MAX_WORD];  // the ISP to which the DNS resolver belongs 
         int  rrt; // Round trip time
         int openflag; // is it a open resolver ? 
-        int (*connet) (int protocol );
+        //int (*connet) (int protocol );
+
+        // assigned by listener, to keep state to the upstream resolvers
+        // used by sender, to forward dns queries 
+        struct sockaddr_in server_addr;
+        int sockfd;
+
+        int current_txid;
+
+
 } Resolver;
 
+typedef struct _resolver_list{
+    Resolver *resolvers[MAX_RESOLVERS];
+    int   (*match)(const void *key1, const void *key2);
+    void  (*display)(void *data);
+    int size;
+} ResolverList;
+
+void resolver_list_init(ResolverList *rl, void (*match)( void * key1, void * key2), void (*display)(void *data)  );
 int resolver_match( char * resolver_name, Resolver * res);
 void resolver_display( Resolver * res);
-int resolver_load(char * source_file, List * resolvers );
+int resolver_list_load(char * source_file, ResolverList * resolvers );
+void resolver_list_free(ResolverList *rl) ;
+Resolver * resolver_list_lookup(resolvers, resolver_name );
 
-
-#define resolver_free(res) list_destroy(res)
-#define resolver_travel(res) list_travel(res)
+//#define resolver_free(res) list_destroy(res)
+//#define resolver_travel(res) list_travel(res)
 #endif

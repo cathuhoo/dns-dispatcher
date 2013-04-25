@@ -40,7 +40,7 @@ typedef struct _policy{
 
 void policy_travel (Policy * policy);
 int policy_free(Policy *policy);
-int policy_load( char * policy_file, Policy * policy, List *resolvers);
+int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers);
 int policy_load_ipprefix( Policy * policy); //, IPPrefix * ip_prefix);
 int policy_load_domain( Policy * policy); //, trieNode_t * trie);
 Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  );

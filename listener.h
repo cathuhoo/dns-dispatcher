@@ -6,6 +6,8 @@
 #include "resolvers.h"
 #include "config.h"
 
-int recv_and_send(Policy * policy, List *resolvers, Configuration *config);
+pthread_t listener(); //Policy * policy, List *resolvers, Configuration *config);
+
+void * listen_thread_handler(void * arg);
 
 #endif

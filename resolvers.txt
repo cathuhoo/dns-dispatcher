@@ -1,6 +1,6 @@
 secret|184.22.34.216|5300|5300|burst
 tsinghua|166.111.8.28|53| |CERNET
-ccert|202.112.57.6:53
+ccert|202.112.57.6|53
 telecom|219.141.136.10
 cnnic|1.2.4.8
 google|8.8.8.8

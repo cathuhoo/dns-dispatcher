@@ -7,7 +7,7 @@
 #include "common.h"
 #include "mystring.h"
 //#include "list.h"
-//#include "resolvers.h"
+#include "resolvers.h"
 #include "ip_prefix.h"
 #include "trie.h"
 #include "policy.h"
@@ -51,7 +51,7 @@ void policy_travel (Policy * policy)
     }
 }
 
-int action_parse( Action * act, char * str, List * resolvers)
+int action_parse( Action * act, char * str, ResolverList * resolvers)
 {
     if ( act == NULL || str == NULL)
         return -1;
@@ -78,7 +78,7 @@ int action_parse( Action * act, char * str, List * resolvers)
             act->op = Forward;
             token = strsep( &str2, DELIM2);
             resolver_name=strtrim(token);
-            Resolver * res = list_lookup(resolvers, resolver_name );
+            Resolver * res = resolver_list_lookup(resolvers, resolver_name );
             if (res == NULL)
             {
                 fprintf(stdout, "ERROR: No resolvers found for this rule:%s \n", str);
@@ -95,7 +95,7 @@ int action_parse( Action * act, char * str, List * resolvers)
     }
     return -1;
 }
-Rule * rule_parse(char * line , List * resolvers)
+Rule * rule_parse(char * line , ResolverList * resolvers)
 {
     Rule * pr;
     char *tofree, *token, *str, buffer[MAX_WORD];
@@ -165,7 +165,7 @@ int policy_free(Policy *policy)
     trie_free(policy->trie_dn);
     return 0;
 }
-int policy_load( char * policy_file, Policy * policy, List *resolvers)
+int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers)
 {
     FILE * fp;
     Rule * rule;

@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 
 
+#define MAX_RESOLVERS 64
 #define MAX_LINE 1024
 #define MAX_WORD 64
 #define DELIM  "|"
@@ -47,6 +48,7 @@
         fflush(config.fd_log);  \
     }
 
+
 typedef long RuleSet;
 
 #define trieVal_t RuleSet
@@ -54,5 +56,16 @@ typedef long RuleSet;
 //Add element to set. Here element must little than length of RuleSet (for long int, 32)
 #define ADDTOSET(set, element)  set = set | (1 << element) 
 #define CLEARSET(s)  s = s & 0x0
+
+int CreateClientSocket(char * server_address,int protocol, int server_port, struct sockaddr_in * addr_struct);
+
+int CreateServerSocket(int protocol, int port, struct sockaddr_in * addr, int openflag);
+
+int maximum(int array[], int size);
+
+#define  error_report(fmt, ...)  \
+    { \
+        fprintf(stderr, fmt, ##__VA_ARGS__); fprintf(stderr, "%s(%d)\n",__FILE__, __LINE__); \
+    }
 
 #endif

@@ -37,6 +37,16 @@
 #include "policy.h"
 #include "ip_prefix.h"
 #include "trie.h"
+#include "query.h"
+
+Configuration config;
+ResolverList resolvers;
+Policy policy;
+QueryList  queries;
+
+pthread_t tid_listener;
+pthread_t *tid_dispatchers;
+pthread_t tid_sender;
 
 
 void usage(char * self_name)
@@ -52,9 +62,6 @@ void usage(char * self_name)
 
 }
 
-Configuration config;
-List resolvers;
-Policy policy;
 
 int main(int argc, char* argv[])
 {
@@ -130,9 +137,9 @@ int main(int argc, char* argv[])
 
     if(config.file_resolvers)
     {
-        resolver_load(config.file_resolvers, &resolvers);
+        resolver_list_load(config.file_resolvers, &resolvers);
         #ifdef DEBUG
-            resolver_travel(&resolvers);
+            resolver_list_travel(&resolvers);
         #endif
     }
     else
@@ -171,12 +178,26 @@ int main(int argc, char* argv[])
         //This is the main loop, which :
         //  (1) recieves DNS queries from downstream client(users), and dispatches them to resolver_selectors ;  
         //  (2) receives DNS replies from upstream   
-        recv_and_send(&policy, &resolvers, &config);
+          
+        // A thread to recieve queries from clients, and replies to the clients
+        tid_listener = listener();//&resolvers, &config, &queries);
+
+        // Some threads to select upstream resolvers according to policy and <src_ip, target_domain>
+        //TODO
+        //dispatcher(&policy, &resolvers, &config, &queries)
+
+        //A thread to send queries to upstream resolvers, and send replies back to the clients
+        //TODO
+        //sender(&resolvers, &config, &queries);
+
+        pthread_join(tid_listener, NULL);
+        //pthread_join(tid_listener, NULL);
     }
         
+
     //Free all the memory
     //trie_free(policy.trie_dn);
-    resolver_free(&resolvers);
+    resolver_list_free(&resolvers);
     policy_free(&policy);
     config_free(&config);
     return 0;
