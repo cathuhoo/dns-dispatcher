@@ -1,5 +1,7 @@
 #include <sys/select.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "common.h"
 
@@ -134,7 +136,8 @@ void * listen_thread_handler(void * arg)
    {
        int count;
        //int timeout = TIMEOUT;
-	struct timeval timeout={TIMEOUT,0};
+	   //struct timeval timeout={TIMEOUT,0};
+       struct timespec timeout={5,0};
 
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
@@ -143,7 +146,8 @@ void * listen_thread_handler(void * arg)
           FD_SET( resolverSockFds[i], &read_fds);
 
        debug("before select, max_fd=%d, timeout=%d\n", max_fd, timeout);
-       count = select( max_fd, &read_fds, NULL, NULL, &timeout); 
+       //count = select( max_fd, &read_fds, NULL, NULL, NULL); // &timeout); 
+       count = pselect( max_fd, &read_fds, NULL, NULL, NULL, NULL); // &timeout); 
 
        debug("after select, count=%d\n", count);
         
