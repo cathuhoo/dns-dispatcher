@@ -2,6 +2,9 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <sys/param.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
 
 #include "common.h"
 
@@ -74,9 +77,35 @@ pthread_t listener()//List * resolvers, Configuration *config, QueryList * queri
     }
     return tid;
 }
-int udp_query_process()
+int udp_query_process(int sockfd)
 {
     debug("udp_query_process\n");
+
+   struct sockaddr_in client_addr;
+    socklen_t addrLen;
+    u_char query_buffer[NS_MAXMSG];
+
+    int queryLen, n; 
+    ns_rr rr;
+    //char *name, reversedName[NS_MAXDNAME];
+    //char strAddr[64];
+
+    ns_msg handle;  /* handle for response message */
+    memset(&handle, 0, sizeof(handle));
+
+    memset(query_buffer, 0, sizeof(query_buffer));
+    addrLen=sizeof(client_addr);
+    queryLen = recvfrom(sockfd, query_buffer, NS_MAXMSG, 0,
+                                       (struct sockaddr * )&client_addr, &addrLen);
+   
+
+
+    return 0;
+} 
+int udp_reply_process(int sockfd)
+{
+    debug("udp_reply_process, sockd=%d\n", sockfd);
+    
 
     return 0;
 } 
@@ -99,6 +128,7 @@ void * listen_thread_handler(void * arg)
 
     struct sockaddr_in udpServiceAddr, tcpServiceAddr;
 
+    int num=0;
     for (i=0; i< resolvers_local->size; i ++)// for each resolver
     {
         Resolver *res=resolvers_local->resolvers[i];
@@ -107,17 +137,18 @@ void * listen_thread_handler(void * arg)
        if (sockfd == -1)  
        {
            //Error, skip it
+           debug("CreateClientSocket Error for resolver : %s\n", res->name);
            continue; 
        }
        else
        {
             // add this sockfd to sockfd_monitored
-            resolverSockFds[i] = sockfd;
+            resolverSockFds[num] = sockfd;
             res->sockfd = sockfd;
-            i ++ ;
+            debug ("sockf:%d for resolver :%s \n", resolverSockFds[num], res->name);
        }
     } 
-    num_resolvers = i;
+    num_resolvers = num;
 
     //TODO:
     int udpServiceFd, tcpServiceFd;
@@ -145,7 +176,7 @@ void * listen_thread_handler(void * arg)
        for( i=0; i< num_resolvers; i ++)
           FD_SET( resolverSockFds[i], &read_fds);
 
-       debug("before select, max_fd=%d, timeout=%d\n", max_fd, timeout);
+       debug("before select, max_fd=%d\n", max_fd);
        //count = select( max_fd, &read_fds, NULL, NULL, NULL); // &timeout); 
        count = pselect( max_fd, &read_fds, NULL, NULL, NULL, NULL); // &timeout); 
 
@@ -175,7 +206,7 @@ void * listen_thread_handler(void * arg)
         if (FD_ISSET(udpServiceFd, &read_fds) )  
         {
        	    debug(" udpService =%d\n", count);
-            udp_query_process();
+            udp_query_process(udpServiceFd);
         }
 
         // Request from clients via TCP 
@@ -190,8 +221,9 @@ void * listen_thread_handler(void * arg)
         { 
             if ( FD_ISSET (resolverSockFds[i], &read_fds))
             {
-       	    	debug("forwarderSocks[%d], %d\n",i, count);
-               //udp_reply_process(); 
+       	    	//debug("forwarderSocks[%d], %d\n",i, count);
+                udp_reply_process(resolverSockFds[i]); 
+               
             }
         }
 
