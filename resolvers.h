@@ -26,7 +26,8 @@ typedef struct _resolver{
 
 typedef struct _resolver_list{
     Resolver *resolvers[MAX_RESOLVERS];
-    int   (*match)(const void *key1, const void *key2);
+    //int   (*match)(const void *key1, const void *key2);
+    int   (*match)(char *key1,  Resolver *key2);
     void  (*display)(void *data);
     int size;
 } ResolverList;
@@ -36,7 +37,7 @@ int resolver_match( char * resolver_name, Resolver * res);
 void resolver_display( Resolver * res);
 int resolver_list_load(char * source_file, ResolverList * resolvers );
 void resolver_list_free(ResolverList *rl) ;
-Resolver * resolver_list_lookup(resolvers, resolver_name );
+Resolver * resolver_list_lookup(ResolverList *resolvers, char *resolver_name );
 
 //#define resolver_free(res) list_destroy(res)
 //#define resolver_travel(res) list_travel(res)

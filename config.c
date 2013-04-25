@@ -4,6 +4,7 @@
 #include <sys/stat.h> 
 #include <unistd.h> //open, O_RDWR
 #include <fcntl.h>
+#include <signal.h>
 
 #include "ini.h"
 #include "config.h"

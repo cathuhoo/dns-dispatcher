@@ -1,4 +1,5 @@
 #include <sys/select.h>
+#include <pthread.h>
 
 #include "common.h"
 
@@ -132,7 +133,8 @@ void * listen_thread_handler(void * arg)
    for (;;)
    {
        int count;
-       int timeout = TIMEOUT;
+       //int timeout = TIMEOUT;
+	struct timeval timeout={TIMEOUT,0};
 
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
@@ -141,12 +143,14 @@ void * listen_thread_handler(void * arg)
           FD_SET( resolverSockFds[i], &read_fds);
 
        debug("before select, max_fd=%d, timeout=%d\n", max_fd, timeout);
-       count = select( max_fd, &read_fds, NULL, NULL, NULL); 
-       debug("before select, count=%d\n", count);
+       count = select( max_fd, &read_fds, NULL, NULL, &timeout); 
+
+       debug("after select, count=%d\n", count);
         
        if (count < 0) //Maybe Interrupted, such as ^C pressed 
        {
             #ifdef DEBUG
+       		debug(" Interrupted, count=%d\n", count);
                 break;
             #else
                 continue;
@@ -157,7 +161,8 @@ void * listen_thread_handler(void * arg)
         {
             //do something, or continue...
             #ifdef DEBUG
-                fprintf(stdout, "listener is waiting ...");
+                fprintf(stdout, "listener is waiting ...\n");
+       		debug(" count=%d\n", count);
             #endif
             continue;
         }
@@ -165,12 +170,14 @@ void * listen_thread_handler(void * arg)
         // Request from clients via UDP 
         if (FD_ISSET(udpServiceFd, &read_fds) )  
         {
+       	    debug(" udpService =%d\n", count);
             udp_query_process();
         }
 
         // Request from clients via TCP 
         if (FD_ISSET(tcpServiceFd, &read_fds) )
         {
+       	    debug(" tcpService =%d\n", count);
             //tcp_request_process();
         }
         
@@ -179,6 +186,7 @@ void * listen_thread_handler(void * arg)
         { 
             if ( FD_ISSET (resolverSockFds[i], &read_fds))
             {
+       	    	debug("forwarderSocks[%d], %d\n",i, count);
                //udp_reply_process(); 
             }
         }
