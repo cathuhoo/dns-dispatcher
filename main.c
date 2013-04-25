@@ -62,6 +62,33 @@ void usage(char * self_name)
 
 }
 
+void signal_handler(int sig)
+{
+    switch(sig) {
+    
+     case SIGHUP:
+        if(config.file_log !=NULL)
+        {
+            fclose(config.fd_log);
+            config.fd_log=fopen(config.file_log,"a");
+        }
+       break;
+
+     case SIGINT:
+     case SIGTERM:
+        debug("I: Signal terminate(SIGTERM), dump and bye.\n");
+        if(config.file_log != NULL)
+            fclose(config.fd_log);
+
+        resolver_list_free(&resolvers);
+        policy_free(&policy);
+        config_free(&config);
+
+        exit(0); // don't return to the select loop in forwarder()
+      break;
+    }
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -174,6 +201,10 @@ int main(int argc, char* argv[])
                 printf("re:%s\n", pa->resolver->name);
             }
         #endif
+
+        signal(SIGTERM,signal_handler); // catch kill Terminate signal 
+        signal(SIGINT,signal_handler); // catch kill Interrupt signal 
+        signal(SIGHUP,signal_handler); // catch kill Interrupt signal 
 
         //This is the main loop, which :
         //  (1) recieves DNS queries from downstream client(users), and dispatches them to resolver_selectors ;  
