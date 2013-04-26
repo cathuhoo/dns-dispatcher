@@ -1,9 +1,12 @@
 #ifndef __COMMON__H__
 #define __COMMON__H__
 
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
+#include <pthread.h>
+#include <unistd.h>
 
 
 #define MAX_RESOLVERS 64
@@ -23,6 +26,8 @@
 #define TRUE  1
 #define FALSE 0
 
+
+#define TIME_SLEEP 15 //seconds
 
 #ifdef DEBUG
    #define debug(fmt, ...)  \

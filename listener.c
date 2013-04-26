@@ -19,7 +19,7 @@
 #include "external.h"
 
 
-#define TIMEOUT 5
+#define TIMEOUT 30
 /*
 #define  error_report(fmt, ...)  \
         { \
@@ -100,17 +100,11 @@ int udp_query_process(int sockfd)
 {
     debug("udp_query_process\n");
 
-   struct sockaddr_in client_addr;
+    struct sockaddr_in client_addr;
     socklen_t addrLen;
-    u_char *pStr, query_buffer[NS_MAXMSG];
+    char *pStr, query_buffer[NS_MAXMSG];
 
-    int queryLen, n; 
-    ns_rr rr;
-    //char *name, reversedName[NS_MAXDNAME];
-    //char strAddr[64];
-
-    ns_msg handle;  /* handle for response message */
-    memset(&handle, 0, sizeof(handle));
+    int queryLen; 
 
     memset(query_buffer, 0, sizeof(query_buffer));
     addrLen=sizeof(client_addr);
@@ -121,11 +115,23 @@ int udp_query_process(int sockfd)
         fprintf(stdout, "Got DNS Query from Client\n");
         //addr_ntop_print(&client_addr);
         pStr = malloc(MAX_WORD);
-        pStr=sock_ntop(&client_addr, sizeof(client_addr),pStr, MAX_WORD);
+        pStr=sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr),pStr, MAX_WORD);
         debug("Client address:%s\n", pStr);
         free(pStr); 
     #endif 
     
+    //Add the query to the query list
+
+    Query *ptrQuery = query_new( &client_addr, sockfd, query_buffer);
+ 
+    if (ptrQuery == NULL )  
+    {
+        error_report("Can not allocate memory for Query\n");
+        return -1;
+    }
+    
+    index = querylist_add(&queries, ptrQuery);
+    notify_dispatcher(index);
 
     return 0;
 } 
@@ -139,7 +145,7 @@ int udp_reply_process(int sockfd)
 void * listen_thread_handler(void * arg)
 {
 
-    debug("Now in listen_thread_handler\n");
+    debug("Now listener thread is running...\n");
     fd_set read_fds;
     int *resolverSockFds;
     int i, num_resolvers;
@@ -203,7 +209,6 @@ void * listen_thread_handler(void * arg)
        for( i=0; i< num_resolvers; i ++)
           FD_SET( resolverSockFds[i], &read_fds);
 
-       debug("before select, max_fd=%d\n", max_fd);
        count = select( max_fd, &read_fds, NULL, NULL, &timeout); 
        //count = pselect( max_fd, &read_fds, NULL, NULL, NULL, &timeout); // &timeout); 
 

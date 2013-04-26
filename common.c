@@ -345,12 +345,14 @@ char * sock_ntop(const struct sockaddr *sa, socklen_t salen, char * str, int siz
     return (NULL);
 }
 
+/*
 char *
 Sock_ntop(const struct sockaddr *sa, socklen_t salen)
 {
 	char	*ptr;
 
 	if ( (ptr = sock_ntop(sa, salen)) == NULL)
-		error_report("sock_ntop error");	/* inet_ntop() sets errno */
+		error_report("sock_ntop error");	
 	return(ptr);
 }
+*/

@@ -1,3 +1,9 @@
+
+#include "config.h"
+#include "resolvers.h"
+#include "policy.h"
+#include "query.h"
+
 extern Configuration config;
 extern ResolverList resolvers;
 extern Policy policy;

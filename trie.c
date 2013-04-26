@@ -4,8 +4,6 @@
 #include "trie.h"
 #include "mystring.h"
 
-#define MAX_WORD 64
-
 #define DEFAULT_VALUE 0x0
 
 
