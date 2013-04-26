@@ -172,6 +172,7 @@ Resolver * resolver_list_lookup(ResolverList *rl, char *resolver_name )
             //error
         }
     }
+    return NULL;
 }
 void resolver_list_travel(ResolverList *rl) 
 {

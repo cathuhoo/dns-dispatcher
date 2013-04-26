@@ -8,7 +8,7 @@
 
 #define MAX_RESOLVERS 64
 #define MAX_LINE 1024
-#define MAX_WORD 64
+#define MAX_WORD 256 
 #define DELIM  "|"
 #define DELIM2  ":"
 
@@ -62,6 +62,10 @@ int CreateClientSocket(char * server_address,int protocol, int server_port, stru
 int CreateServerSocket(int protocol, int port, struct sockaddr_in * addr, int openflag);
 
 int maximum(int array[], int size);
+
+char * sock_ntop(const struct sockaddr *sa, socklen_t salen, char * str, int sizeStr);
+
+
 
 #define  error_report(fmt, ...)  \
     { \

@@ -38,6 +38,7 @@ void resolver_display( Resolver * res);
 int resolver_list_load(char * source_file, ResolverList * resolvers );
 void resolver_list_free(ResolverList *rl) ;
 Resolver * resolver_list_lookup(ResolverList *resolvers, char *resolver_name );
+void resolver_list_travel(ResolverList *rl);
 
 //#define resolver_free(res) list_destroy(res)
 //#define resolver_travel(res) list_travel(res)

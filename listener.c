@@ -1,4 +1,5 @@
 #include <sys/select.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -77,13 +78,31 @@ pthread_t listener()//List * resolvers, Configuration *config, QueryList * queri
     }
     return tid;
 }
+/*
+int addr_ntop_print( struct sockaddr_in *addr)
+{
+   char ipstr[MAX_WORD];
+   char *pstr;
+   if (addr ==NULL)
+        return -1;
+    //fprintf(stdout, "sin_len:%d\n", addr->sin_len); 
+    fprintf(stdout, "sin_family:%d\n", addr->sin_family); 
+    fprintf(stdout, "sin_port:%d\n", ntohs(addr->sin_port)); 
+
+    //inet_ntop(addr->sin_family, 
+    pstr= inet_ntop(AF_INET, &addr->sin_addr, ipstr, sizeof(ipstr));
+    
+    fprintf(stdout, "sin_addr:%s\n", ipstr); 
+    return 0;
+}
+*/
 int udp_query_process(int sockfd)
 {
     debug("udp_query_process\n");
 
    struct sockaddr_in client_addr;
     socklen_t addrLen;
-    u_char query_buffer[NS_MAXMSG];
+    u_char *pStr, query_buffer[NS_MAXMSG];
 
     int queryLen, n; 
     ns_rr rr;
@@ -97,8 +116,16 @@ int udp_query_process(int sockfd)
     addrLen=sizeof(client_addr);
     queryLen = recvfrom(sockfd, query_buffer, NS_MAXMSG, 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
-   
-
+    
+    #ifdef DEBUG
+        fprintf(stdout, "Got DNS Query from Client\n");
+        //addr_ntop_print(&client_addr);
+        pStr = malloc(MAX_WORD);
+        pStr=sock_ntop(&client_addr, sizeof(client_addr),pStr, MAX_WORD);
+        debug("Client address:%s\n", pStr);
+        free(pStr); 
+    #endif 
+    
 
     return 0;
 } 
@@ -167,8 +194,8 @@ void * listen_thread_handler(void * arg)
    {
        int count;
        //int timeout = TIMEOUT;
-	   //struct timeval timeout={TIMEOUT,0};
-       struct timespec timeout={5,0};
+	   struct timeval timeout={TIMEOUT,0};
+       //struct timespec timeout={5,0};
 
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
@@ -177,8 +204,8 @@ void * listen_thread_handler(void * arg)
           FD_SET( resolverSockFds[i], &read_fds);
 
        debug("before select, max_fd=%d\n", max_fd);
-       //count = select( max_fd, &read_fds, NULL, NULL, NULL); // &timeout); 
-       count = pselect( max_fd, &read_fds, NULL, NULL, NULL, NULL); // &timeout); 
+       count = select( max_fd, &read_fds, NULL, NULL, &timeout); 
+       //count = pselect( max_fd, &read_fds, NULL, NULL, NULL, &timeout); // &timeout); 
 
        debug("after select, count=%d\n", count);
         

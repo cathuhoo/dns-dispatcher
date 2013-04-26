@@ -38,6 +38,7 @@
 #include "ip_prefix.h"
 #include "trie.h"
 #include "query.h"
+#include "listener.h"
 
 Configuration config;
 ResolverList resolvers;
@@ -76,7 +77,7 @@ void signal_handler(int sig)
 
      case SIGINT:
      case SIGTERM:
-        debug("I: Signal terminate(SIGTERM), dump and bye.\n");
+        debug("Signal terminate(SIGTERM), free memory and bye.\n");
         if(config.file_log != NULL)
             fclose(config.fd_log);
 
@@ -177,7 +178,7 @@ int main(int argc, char* argv[])
 
     if(NULL == config.file_policy)
     {
-        my_log(config.fd_log, "ERROR: no policy file in config file \n");    
+        my_log("ERROR: no policy file in config file \n");    
         error=1;
     }
     else
