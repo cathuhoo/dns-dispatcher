@@ -37,9 +37,9 @@
 #include "query.h"
 
 //Threads
-#include "listener.h"
+#include "recv_send.h"
 #include "dispatcher.h"
-#include "sender.h"
+//#include "sender.h"
 
 Configuration config;
 ResolverList resolvers;
