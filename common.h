@@ -8,6 +8,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 #define MAX_RESOLVERS 64
@@ -58,13 +60,14 @@
 typedef long RuleSet;
 
 #define trieVal_t RuleSet
+#define SA struct sockaddr
 
 //Add element to set. Here element must little than length of RuleSet (for long int, 32)
 #define ADDTOSET(set, element)  set = set | (1 << element) 
 #define CLEARSET(s)  s = s & 0x0
 
 
-int CreateClientSocket(int addr_family, char * server_address,int protocol, int server_port, struct sockaddr_in * client_addr);
+int CreateClientSocket(int addr_family, char * server_address,int protocol, int server_port, SA *client_addr);
 // addr_family = AF_INET| AF_LOCAL
 //
 int CreateServerSocket(int addr_family, int protocol, char * str_addr,  int port, struct sockaddr_in * server_addr);

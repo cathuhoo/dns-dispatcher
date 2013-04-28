@@ -131,29 +131,48 @@ char * strTrim(char * s){
 
 //int CreateClientUnixSocket( char * server_path, int protocol, 
 
-int CreateClientSocket(int addr_family, char * server_address,int protocol, int server_port, struct sockaddr_in * client_addr)
+int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int server_port, SA *saServAddr)
 {
     int sockfd, rcode;
-    
 
     sockfd = socket(addr_family, protocol, 0);
     if(sockfd ==-1)
     {
         fprintf(stderr, "Error: CreateClientSocket: to %s error: %s(%d) in %s(%d).\n" , 
-                server_address, strerror(errno), errno, __FILE__, __LINE__);
+                strServAddr, strerror(errno), errno, __FILE__, __LINE__);
         return -1;
     }
-    bzero(client_addr, sizeof(client_addr));
-    client_addr->sin_family = addr_family;
+    bzero(saServAddr, sizeof(SA));
 
-    client_addr->sin_port = htons(server_port);
-    rcode=inet_pton(addr_family, server_address, &(client_addr->sin_addr));
-    if (rcode <=0)
+    switch ( addr_family)
     {
-        fprintf(stderr, "Error: CreateClientSocket: inet_pton error:%s\n" , server_address);
-        return -1;
-    }
-    return sockfd;
+        case AF_INET :
+        {
+            struct sockaddr_in *psa = saServAddr;
+            psa->sin_family = addr_family;
+
+            psa->sin_port = htons(server_port);
+            rcode=inet_pton(addr_family, strServAddr, &(psa->sin_addr));
+            if (rcode <=0)
+            {
+                fprintf(stderr, "Error: CreateClientSocket: inet_pton error:%s\n", strServAddr);
+                return -1;
+            }
+            return sockfd;
+        }
+
+        case AF_LOCAL:
+        {
+            struct sockaddr_un *psa = saServAddr;
+
+            psa->sun_family = AF_LOCAL;
+            strcpy( psa->sun_path, strServAddr);
+            connect( sockfd, (SA *) psa, sizeof(SA));
+            return sockfd;
+        }
+    } //switch
+
+    return -1;
 }
 
 int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port, struct sockaddr_in * server_addr )
@@ -167,14 +186,10 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
                 strerror(errno), errno, __FILE__, __LINE__);
         return -1;
     }
-
     bzero(server_addr, sizeof(struct sockaddr));
-
     switch(addr_family){
-
         case AF_INET:
         {
-
             server_addr->sin_family      = addr_family;
             long longAddr; 
             if(1 != inet_pton(AF_INET, str_addr, &longAddr))
@@ -183,17 +198,7 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
                 close(socket_fd);
                 return -1;
             }
-            /*
-            if( 0 == strcmp(str_addr, "0.0.0.0") ) 
-                server_addr->sin_addr.s_addr = htonl(INADDR_ANY);
-            else if ( 0 == strcmp( str_addr, "127.0.0.1"))
-                server_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-            */
-            
             server_addr->sin_addr.s_addr = longAddr; //htonl(str_addr);
-
-
             server_addr->sin_port        = htons(port);
 
             rcode=bind(socket_fd, (struct sockaddr *) server_addr, sizeof(struct sockaddr));
@@ -218,18 +223,30 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
         }
         case AF_LOCAL:
         {
-
             struct sockaddr_un  *unp = (struct sockaddr_un *) server_addr;
             unlink(str_addr);
             unp->sun_family = AF_LOCAL;
             strcpy(unp->sun_path, str_addr);
             bind(socket_fd, (struct sockaddr *) unp, sizeof( struct sockaddr));
+            if ( protocol == SOCK_STREAM )
+            {
+                rcode = listen(socket_fd, 1); //MAX_TCP_CLIENTS);
+                if(rcode ==-1)
+                {
+                    fprintf(stderr, "Error: listen on socket %d error, errno=%d in %s(%d).\n", 
+                          socket_fd, errno, __FILE__, __LINE__);
+                    close(socket_fd);
+                    return -1;
+                }
+            }
             return socket_fd;
         }
     }//switch
+    fprintf(stderr, "Error: Unknown Address_family :%d in %s(%d).\n", 
+            addr_family, __FILE__, __LINE__);
+    close(socket_fd);
     return -1;
 }
-
 
 //You must be sure that the size of array is large enough, 
 //that is equal or greater than range

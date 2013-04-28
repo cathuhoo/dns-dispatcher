@@ -37,7 +37,7 @@ int querylist_add(QueryList *ql, Query *query)
 int query_free(Query *pt)
 {
     if (pt == NULL )
-        return ;
+        return -1 ;
 
     if (pt->qname )
     {

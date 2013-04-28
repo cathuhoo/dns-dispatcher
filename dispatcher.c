@@ -5,11 +5,19 @@
 #include "external.h"
 
 
+typedef struct __argdis_{
+    int  fd;
+    struct sockaddr * addr;
+} ARGS_DISP;
+
 void * dispatcher_thread_handler( void * args)
 {
     debug("dispatcher thread is running..\n");
 
-    int sockfd=  *((int *)args);
+    ARGS_DISP * pArgs= args;
+    int sockfd= pArgs->fd;
+    struct sockaddr * server_addr =  pArgs->addr;
+    
     free(args);
 
     pthread_t tid_me = pthread_self();
@@ -17,22 +25,33 @@ void * dispatcher_thread_handler( void * args)
 
     for (;;)
     {
-        sleep(TIME_SLEEP);
         debug("dispatcher thread[%lu] is running, listen on un_socket:%d..\n", (unsigned long)tid_me, sockfd);
+        int num;
+        char buffer[MAX_WORD];
+        socklen_t len;
+        struct sockaddr_un client_addr;
+
+        num = recvfrom(sockfd, buffer, MAX_WORD, 0, (SA *) &client_addr, &len);  
+        #ifdef DEBUG
+            char strAddr[MAX_WORD];
+            char * strClient = sock_ntop((SA *)& client_addr, len, strAddr, sizeof(strAddr));
+            debug("Got task from %s, message:%s\n",strAddr, buffer ); 
+        #endif
         
     }  
 }
 
 
-pthread_t dispatcher( char * unix_sock_name)
+pthread_t dispatcher(int idx )
 {
     debug("Dispatcher Begin\n");
-    debug("on unix socket:%s\n", unix_sock_name);
-    
-    pthread_t tid;
-    char un_name[MAX_WORD];
-    int *sockfd= malloc(sizeof(int));
 
+    pthread_t tid;
+
+    ARGS_DISP * pArgs = malloc(sizeof( ARGS_DISP));
+    pArgs->addr = malloc(sizeof(struct sockaddr));
+
+/*
     struct sockaddr_un servaddr, cliaddr;
 
     unlink(unix_sock_name);
@@ -42,9 +61,22 @@ pthread_t dispatcher( char * unix_sock_name)
     servaddr.sun_family = AF_LOCAL;
     strcpy(servaddr.sun_path, unix_sock_name);
     bind(*sockfd, (struct socakaddr *) &servaddr, sizeof(servaddr));
-
+*/
+    char path_name[MAX_WORD];
+    sprintf(path_name, "%s_%d", "/tmp/dns_dispatcher_unix_socket_", idx);
+    pArgs->fd = CreateServerSocket(AF_LOCAL, SOCK_STREAM, path_name, 0, (struct sockaddr_in *)pArgs->addr); 
     
-    if ( 0 != pthread_create(&tid, NULL, &dispatcher_thread_handler, (void*)sockfd ))
+    if( pArgs->fd <0)
+    {
+        fprintf(stderr, "Error: Cannot create unix server socket for dispatcher %d \n", idx);
+        free(pArgs); 
+        return 0; 
+    }
+
+    disp_addr[idx].sockfd= pArgs->fd;
+    strcpy(disp_addr[idx].path_name, path_name);
+    
+    if ( 0 != pthread_create(&tid, NULL, &dispatcher_thread_handler, (void*)pArgs ))
     {
         error_report("Cannot create thread for dispatcher\n");
         return 0;

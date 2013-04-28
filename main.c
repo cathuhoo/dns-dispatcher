@@ -45,7 +45,9 @@ Configuration config;
 ResolverList resolvers;
 Policy policy;
 QueryList  queries;
-char * un_names[MAX_RESOLVERS];
+//char * un_names[MAX_RESOLVERS];
+
+Disp_info *disp_addr;
 
 
 void usage(char * self_name)
@@ -215,24 +217,19 @@ int main(int argc, char* argv[])
           
         // Some threads to select upstream resolvers according to policy and <src_ip, target_domain>
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
+        disp_addr = malloc(sizeof(Disp_info) * config.num_threads);
         int i;
         
         for( i=0; i < config.num_threads; i ++)
         {
-            un_names[i] = malloc(MAX_WORD);
-            sprintf(un_names[i],"/tmp/dispatcher_%d\n",i);             
-            tid_dispatchers[i] = dispatcher(un_names[i]);
+            //disp_addr.path_name[i] = malloc(MAX_WORD);
+            //sprintf(disp_addr[i].path_name,"/tmp/dispatcher_%d\n",i);             
+            tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
         }
         
         debug("After dispatcher, now ready to create recv_send threads\n");
         // A thread to recieve queries from clients, and replies to the clients
-        tid_listener = listener(un_names, i);
-
-
-        //A thread to send queries to upstream resolvers, and send replies back to the clients
-        //TODO
-
-        //tid_sender = sender(); 
+        tid_listener = recv_send();
 
         pthread_join(tid_listener, NULL);
         for( i=0; i < config.num_threads; i ++)

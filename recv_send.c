@@ -57,15 +57,16 @@ extern pthread_t *tid_dispatchers;
 extern pthread_t tid_sender;
 */
 
-pthread_t listener(char * names[], int num) //List * resolvers, Configuration *config, QueryList * queries)
+pthread_t recv_send() //char * names[], int num) //List * resolvers, Configuration *config, QueryList * queries)
 {
 
     debug("Now in listener\n");
     int i;
-    for ( i=0; i< num ; i++)
-        debug("unix_socks_name[%d]:%s\n",i, names[i]);
+    for ( i=0; i< config.num_threads; i++)
+        debug("unix_socks_name[%d]:%s\n",i, disp_addr[i].path_name);
 
     pthread_t tid;
+
     ARGS * args;
 
     args = (ARGS *) malloc(sizeof(ARGS));
@@ -170,7 +171,7 @@ void * listen_thread_handler(void * arg)
     {
         Resolver *res=resolvers_local->resolvers[i];
        int sockfd;
-       sockfd = CreateClientSocket(AF_INET, res->ipaddress, SOCK_DGRAM, res->udp_port, &res->server_addr );
+       sockfd = CreateClientSocket(AF_INET, res->ipaddress, SOCK_DGRAM, res->udp_port,(SA*) &res->server_addr );
        if (sockfd == -1)  
        {
            //Error, skip it
@@ -190,15 +191,30 @@ void * listen_thread_handler(void * arg)
     //TODO:
     int udpServiceFd, tcpServiceFd;
 
-    udpServiceFd = CreateServerSocket( SOCK_DGRAM,  config.service_port, &udpServiceAddr, 1);//1 for open
+    udpServiceFd = CreateServerSocket(AF_INET, SOCK_DGRAM,  "0.0.0.0", config.service_port, &udpServiceAddr);//1 for open
 
-    tcpServiceFd = CreateServerSocket( SOCK_STREAM, config.service_port, &tcpServiceAddr, 1);
+    tcpServiceFd = CreateServerSocket(AF_INET, SOCK_STREAM, "0.0.0.0", config.service_port, &tcpServiceAddr);
 
     int *dispatcherSockFds=malloc( sizeof(int) * config.num_threads);
     for (i=0; i< config.num_threads; i ++)
     {
-         debug("Listern thread: unix_sock_name:%s\n", un_names[i]);    
+        int sockfd;
+        struct sockaddr_un client_addr;
+
+        debug("Listern thread: unix_sock_name:%s\n", disp_addr[i].path_name);    
+        sockfd = CreateClientSocket(AF_LOCAL, disp_addr[i].path_name, SOCK_DGRAM, 0, (SA *)&client_addr);
+        if (sockfd == -1)
+        {
+            fprintf(stderr, "Erron on Connect to Unix Socket:%s \n", disp_addr[i].path_name);
+        }
+        else
+        {
+
+        }
+        
     }
+
+
    int max_fd =  maximum(resolverSockFds, num_resolvers);
    max_fd =  MAX2(max_fd, udpServiceFd);
    max_fd =  MAX2(max_fd, tcpServiceFd);
