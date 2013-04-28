@@ -57,10 +57,14 @@ extern pthread_t *tid_dispatchers;
 extern pthread_t tid_sender;
 */
 
-pthread_t listener()//List * resolvers, Configuration *config, QueryList * queries)
+pthread_t listener(char * names[], int num) //List * resolvers, Configuration *config, QueryList * queries)
 {
 
     debug("Now in listener\n");
+    int i;
+    for ( i=0; i< num ; i++)
+        debug("unix_socks_name[%d]:%s\n",i, names[i]);
+
     pthread_t tid;
     ARGS * args;
 
@@ -130,8 +134,8 @@ int udp_query_process(int sockfd)
         return -1;
     }
     
-    index = querylist_add(&queries, ptrQuery);
-    notify_dispatcher(index);
+    unsigned int index = querylist_add(&queries, ptrQuery);
+    //notify_dispatcher(index);
 
     return 0;
 } 
@@ -166,7 +170,7 @@ void * listen_thread_handler(void * arg)
     {
         Resolver *res=resolvers_local->resolvers[i];
        int sockfd;
-       sockfd = CreateClientSocket(res->ipaddress, SOCK_DGRAM, res->udp_port, &res->server_addr );
+       sockfd = CreateClientSocket(AF_INET, res->ipaddress, SOCK_DGRAM, res->udp_port, &res->server_addr );
        if (sockfd == -1)  
        {
            //Error, skip it
@@ -190,6 +194,11 @@ void * listen_thread_handler(void * arg)
 
     tcpServiceFd = CreateServerSocket( SOCK_STREAM, config.service_port, &tcpServiceAddr, 1);
 
+    int *dispatcherSockFds=malloc( sizeof(int) * config.num_threads);
+    for (i=0; i< config.num_threads; i ++)
+    {
+         debug("Listern thread: unix_sock_name:%s\n", un_names[i]);    
+    }
    int max_fd =  maximum(resolverSockFds, num_resolvers);
    max_fd =  MAX2(max_fd, udpServiceFd);
    max_fd =  MAX2(max_fd, tcpServiceFd);

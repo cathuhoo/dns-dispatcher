@@ -23,15 +23,18 @@ int querylist_add(QueryList *ql, Query *query)
     if ( ql== NULL || query == NULL)
         return -1;
 
-    while (ql->queries[ql->cur])
+    /*Query * qlist = ql->queries;
+    unsigned int i=ql->cur;
+    */
+    while (ql->queries[ql->cur] != NULL)
     { 
-        ql->cur =(ql->cul + 1) % MAX_QUERY_NUM;
+        ql->cur =(ql->cur + 1) % MAX_QUERY_NUM;
     }
     ql->queries[ql->cur] = query; 
     return ql->cur; 
 }
 
-void query_free(Query *pt)
+int query_free(Query *pt)
 {
     if (pt == NULL )
         return ;
@@ -51,6 +54,7 @@ void query_free(Query *pt)
     }
 
     free(pt);
+    return 0;
 }
 
 

@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/un.h>
 
 
 #define MAX_RESOLVERS 64
@@ -62,9 +63,14 @@ typedef long RuleSet;
 #define ADDTOSET(set, element)  set = set | (1 << element) 
 #define CLEARSET(s)  s = s & 0x0
 
-int CreateClientSocket(char * server_address,int protocol, int server_port, struct sockaddr_in * addr_struct);
 
-int CreateServerSocket(int protocol, int port, struct sockaddr_in * addr, int openflag);
+int CreateClientSocket(int addr_family, char * server_address,int protocol, int server_port, struct sockaddr_in * client_addr);
+// addr_family = AF_INET| AF_LOCAL
+//
+int CreateServerSocket(int addr_family, int protocol, char * str_addr,  int port, struct sockaddr_in * server_addr);
+// addr_family = AF_INET| AF_LOCAL
+// protocol = SOCK_STREAM| SOCK_DGRAM
+//
 
 int maximum(int array[], int size);
 

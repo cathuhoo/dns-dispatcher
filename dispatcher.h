@@ -3,6 +3,6 @@
 
 #include <pthread.h>
 
-pthread_t dispatcher();
+pthread_t dispatcher(char * unix_sock_name);
 
 #endif

@@ -36,8 +36,8 @@ typedef struct _query{
 } Query;
 
 typedef struct _query_array{
-    int cur;
-    Query   queries[MAX_QUERY_NUM];
+    unsigned int cur;
+    Query   *queries[MAX_QUERY_NUM];
 } QueryList;
 
 typedef struct _forwarded{

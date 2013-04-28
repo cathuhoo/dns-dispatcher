@@ -45,7 +45,7 @@ Configuration config;
 ResolverList resolvers;
 Policy policy;
 QueryList  queries;
-
+char * un_names[MAX_RESOLVERS];
 
 
 void usage(char * self_name)
@@ -213,18 +213,21 @@ int main(int argc, char* argv[])
         //  (1) recieves DNS queries from downstream client(users), and dispatches them to resolver_selectors ;  
         //  (2) receives DNS replies from upstream   
           
-        // A thread to recieve queries from clients, and replies to the clients
-        tid_listener = listener();//&resolvers, &config, &queries);
-
-        debug("After listener, now ready to create dispatcher threads\n");
-
         // Some threads to select upstream resolvers according to policy and <src_ip, target_domain>
-        //TODO
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
-        
         int i;
+        
         for( i=0; i < config.num_threads; i ++)
-            tid_dispatchers[i] = dispatcher();
+        {
+            un_names[i] = malloc(MAX_WORD);
+            sprintf(un_names[i],"/tmp/dispatcher_%d\n",i);             
+            tid_dispatchers[i] = dispatcher(un_names[i]);
+        }
+        
+        debug("After dispatcher, now ready to create recv_send threads\n");
+        // A thread to recieve queries from clients, and replies to the clients
+        tid_listener = listener(un_names, i);
+
 
         //A thread to send queries to upstream resolvers, and send replies back to the clients
         //TODO
