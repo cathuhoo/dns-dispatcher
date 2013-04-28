@@ -101,6 +101,10 @@ int addr_ntop_print( struct sockaddr_in *addr)
     return 0;
 }
 */
+#ifndef NS_MAXMSG 
+#define NS_MAXMSG 4096 
+#endif
+
 int udp_query_process(int sockfd)
 {
     debug("udp_query_process\n");

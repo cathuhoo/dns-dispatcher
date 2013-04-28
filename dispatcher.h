@@ -5,7 +5,7 @@
 
 typedef struct _sock_info{
     int sockfd;
-    char * path_name;
+    char  path_name[MAX_WORD];
     struct sockaddr_un *cliAddr;
 } Disp_info;
 
