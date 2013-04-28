@@ -11,4 +11,7 @@ typedef struct _sock_info{
 
 pthread_t dispatcher( int i ) ; //char * unix_sock_name);
 
+//static void * dispatcher_thread_handler( void * args);
+
+
 #endif

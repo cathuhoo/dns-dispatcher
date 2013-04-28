@@ -10,7 +10,9 @@ typedef struct __argdis_{
     struct sockaddr * addr;
 } ARGS_DISP;
 
-void * dispatcher_thread_handler( void * args)
+static void * dispatcher_thread_handler( void * args);
+
+static void * dispatcher_thread_handler( void * args)
 {
     debug("dispatcher thread is running..\n");
 
@@ -35,10 +37,11 @@ void * dispatcher_thread_handler( void * args)
         #ifdef DEBUG
             char strAddr[MAX_WORD];
             char * strClient = sock_ntop((SA *)& client_addr, len, strAddr, sizeof(strAddr));
-            debug("Got task from %s, message:%s\n",strAddr, buffer ); 
+            debug("Got task from %s, message:%s\n",strClient, buffer ); 
         #endif
-        
-    }  
+   }  
+
+   return NULL;
 }
 
 
@@ -48,7 +51,14 @@ pthread_t dispatcher(int idx )
 
     pthread_t tid;
 
-    ARGS_DISP * pArgs = malloc(sizeof( ARGS_DISP));
+    ARGS_DISP * pArgs =NULL;
+
+    pArgs =  malloc(sizeof( ARGS_DISP));
+    if( pArgs ==NULL)
+    {
+        error_report("Memory error for dispatcher\n");
+        return 0;
+    } 
     pArgs->addr = malloc(sizeof(struct sockaddr));
 
 /*
@@ -63,22 +73,27 @@ pthread_t dispatcher(int idx )
     bind(*sockfd, (struct socakaddr *) &servaddr, sizeof(servaddr));
 */
     char path_name[MAX_WORD];
-    sprintf(path_name, "%s_%d", "/tmp/dns_dispatcher_unix_socket_", idx);
+    snprintf(path_name, MAX_WORD, "%s_%d.sock", "/tmp/dnsd_unix_socket_", idx);
+    debug("unix socket:%s\n", path_name);
+
     pArgs->fd = CreateServerSocket(AF_LOCAL, SOCK_STREAM, path_name, 0, (struct sockaddr_in *)pArgs->addr); 
     
     if( pArgs->fd <0)
     {
         fprintf(stderr, "Error: Cannot create unix server socket for dispatcher %d \n", idx);
-        free(pArgs); 
+        if(pArgs != NULL) 
+            free(pArgs); 
         return 0; 
     }
 
     disp_addr[idx].sockfd= pArgs->fd;
     strcpy(disp_addr[idx].path_name, path_name);
     
-    if ( 0 != pthread_create(&tid, NULL, &dispatcher_thread_handler, (void*)pArgs ))
+    if ( 0 != pthread_create(&tid, NULL, dispatcher_thread_handler, (void*)pArgs ))
     {
         error_report("Cannot create thread for dispatcher\n");
+        if(pArgs != NULL) 
+            free(pArgs); 
         return 0;
     }
     return  tid;

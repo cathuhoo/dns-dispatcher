@@ -116,17 +116,24 @@ void resolver_list_init( ResolverList *rl, void (*match)( void * key1, void * ke
     rl->size =0;
     rl->match = match;
     rl->display = display;
+
+    int i;
+    for (i=0; i< MAX_RESOLVERS; i++)
+    {
+        rl->resolvers[i] = NULL;
+        fprintf(stderr, "Init:Resolver [%d]: %p\n", i, rl->resolvers[i]);
+    }
 }
 
 //Load resolvers from a text file into resolver array or link ?
-int resolver_list_load(char * source_file, ResolverList * resolvers )
+int resolver_list_load(char * source_file, ResolverList * rl )
 {
     FILE *fp;
     Resolver *res;
     int num=0;
     char line[MAX_LINE], buffer[MAX_LINE];
 
-    resolver_list_init(resolvers, (void *) resolver_match, (void*)resolver_display);
+    resolver_list_init(rl, (void *) resolver_match, (void*)resolver_display);
 
     if ( (fp=fopen(source_file,"r")) == NULL )
     {
@@ -148,8 +155,8 @@ int resolver_list_load(char * source_file, ResolverList * resolvers )
         } 
         //list_ins_next(resolvers, resolvers->tail, res);
 
-        resolvers->resolvers[resolvers->size] = res;
-        resolvers->size ++; 
+        rl->resolvers[rl->size] = res;
+        rl->size ++; 
     }
   
    fclose(fp); 
@@ -179,7 +186,10 @@ void resolver_list_travel(ResolverList *rl)
   int i;
 
   for (i=0; i < rl->size; i++)
+  {
      rl->display(rl->resolvers[i]);
+     fprintf(stderr, "Resolver [%d]: %p\n", i, rl->resolvers[i]);
+  }
 
 }
 
@@ -190,8 +200,12 @@ void resolver_list_free(ResolverList *rl)
     int i;
     for ( i = 0 ; i < rl->size ; i++)
     {
-      if( rl->resolvers[i] )
-        free( rl->resolvers[i]);
+      if( NULL != rl->resolvers[i] )
+      {
+        Resolver * r = rl->resolvers[i];
+        fprintf(stderr, "Resolver [%d]: %p\n", i, r);
+        free(r);
+      }
     }
 }
 

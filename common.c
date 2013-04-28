@@ -148,7 +148,7 @@ int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int ser
     {
         case AF_INET :
         {
-            struct sockaddr_in *psa = saServAddr;
+            struct sockaddr_in *psa = (struct sockaddr_in *)saServAddr;
             psa->sin_family = addr_family;
 
             psa->sin_port = htons(server_port);
@@ -163,7 +163,7 @@ int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int ser
 
         case AF_LOCAL:
         {
-            struct sockaddr_un *psa = saServAddr;
+            struct sockaddr_un *psa = (struct sockaddr_un *)saServAddr;
 
             psa->sun_family = AF_LOCAL;
             strcpy( psa->sun_path, strServAddr);
@@ -227,14 +227,21 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
             unlink(str_addr);
             unp->sun_family = AF_LOCAL;
             strcpy(unp->sun_path, str_addr);
-            bind(socket_fd, (struct sockaddr *) unp, sizeof( struct sockaddr));
+            rcode = bind(socket_fd, (struct sockaddr *) unp, sizeof( struct sockaddr));
+            if(rcode != 0)
+            {
+                fprintf(stderr, "Error: bind on socket %d error, errno=%d:(%s) in %s(%d).\n", 
+                      socket_fd, errno, strerror(errno),__FILE__, __LINE__);
+                close(socket_fd);
+                return -1;
+            }
             if ( protocol == SOCK_STREAM )
             {
                 rcode = listen(socket_fd, 1); //MAX_TCP_CLIENTS);
                 if(rcode ==-1)
                 {
-                    fprintf(stderr, "Error: listen on socket %d error, errno=%d in %s(%d).\n", 
-                          socket_fd, errno, __FILE__, __LINE__);
+                    fprintf(stderr, "Error: listen on socket %d error, errno=%d:(%s) in %s(%d).\n", 
+                      socket_fd, errno, strerror(errno),__FILE__, __LINE__);
                     close(socket_fd);
                     return -1;
                 }

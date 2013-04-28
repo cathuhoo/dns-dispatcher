@@ -225,6 +225,12 @@ int main(int argc, char* argv[])
             //disp_addr.path_name[i] = malloc(MAX_WORD);
             //sprintf(disp_addr[i].path_name,"/tmp/dispatcher_%d\n",i);             
             tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
+            if(0 == tid_dispatchers[i]) 
+            {
+              error_report("Error: Cannot create dispatcher [%d]\n", i);  
+              error=1;
+              goto error_out;
+            }
         }
         
         debug("After dispatcher, now ready to create recv_send threads\n");
@@ -239,10 +245,12 @@ int main(int argc, char* argv[])
     }
         
 
-    //Free all the memory
-    //trie_free(policy.trie_dn);
+error_out:
+    fprintf(stderr, "Ooops! Clean memory of resolvers...\n");
     resolver_list_free(&resolvers);
-    policy_free(&policy);
+    //fprintf(stderr, "Ooops! Clean memory of policy...\n");
+    //policy_free(&policy);
+    fprintf(stderr, "Ooops! Clean memory of config...\n");
     config_free(&config);
     return 0;
 }
