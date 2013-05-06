@@ -7,8 +7,6 @@
 
 #include "external.h"
 
-
-
 /* 
  * Open and listen to the following sockets:
  *  1. one udp server socket to accept client queries via udp
@@ -184,8 +182,18 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     int idx = queries.id_mapping[sockfd][id];
 
     debug("id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
+    if( idx == -1 || id > 65535 ) 
+    {
+        error_report("Index error, id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
+        return -1;
+    }
 
     Query * qr = queries.queries[idx];
+    if( qr == NULL) // No query exists for this reply. 
+    {
+        debug("Warning: no query for this response, txid=%d\n", id);
+       return -1; 
+    }
     u_int16_t old_txid = qr->old_txid;
     debug("old_txid=%x\n", old_txid);
     old_txid = htons(old_txid);

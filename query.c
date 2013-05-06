@@ -5,20 +5,25 @@
 
 int query_id_mapping_alloc(QueryList *ql, int min, int max)
 {
-    if( NULL ==( ql->id_mapping  =  (unsigned short **) malloc(sizeof(unsigned short *) * (max+1))))
+    if( NULL ==( ql->id_mapping  =  (int **) malloc(sizeof(int *) * (max+1))))
     {
         fprintf(stderr, "Error on malloc for id_mapping 1\n");
         return -1;
     }
-    int i;
+    int i, j;
     for (i = min; i <= max; i ++)
     {
-        if( NULL == ( ql->id_mapping[i] = (unsigned short *) malloc( sizeof(unsigned short) * 65536)))
+        if( NULL == ( ql->id_mapping[i] = (int *) malloc( sizeof(int) * 65536)))
         {
             fprintf(stderr, "Error on malloc for id_mapping 2\n");
             return -1;
         }
+        for (j=0; j< 65536; j++)
+        {
+            ql->id_mapping[i][j] = -1;
+        }
     }
+    
     ql->min_fd = min;
     ql->max_fd = max;
 

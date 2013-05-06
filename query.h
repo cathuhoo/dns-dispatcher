@@ -47,7 +47,7 @@ typedef struct _query{
 typedef struct _query_array{
     unsigned int cur;
     Query   * queries[MAX_QUERY_NUM];
-    unsigned short ** id_mapping;
+    int  ** id_mapping;
     int min_fd, max_fd;
 } QueryList;
 
