@@ -286,6 +286,8 @@ int policy_load_domain( Policy * policy) //, trieNode_t * trie)
                 fprintf(stdout, "ERROR: policy_load_domain, rule #%d\n", i);
                 return -1;
             }
+	    printf("After rule[%d], the Trie looks like:\n", i);
+	    TrieTravelE(policy->trie_dn);
         }
     }
     

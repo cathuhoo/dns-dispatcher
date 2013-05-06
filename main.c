@@ -151,7 +151,6 @@ int main(int argc, char* argv[])
     else
     {
         policy_load( "policy.txt", &policy, &resolvers);
-        
     }
     if (!error)
     {

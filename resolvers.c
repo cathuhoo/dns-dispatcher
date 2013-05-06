@@ -200,7 +200,6 @@ void resolver_list_free(ResolverList *rl)
       if( NULL != rl->resolvers[i] )
       {
         Resolver * r = rl->resolvers[i];
-        fprintf(stderr, "Resolver [%d]: %p\n", i, r);
         free(r);
       }
     }

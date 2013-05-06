@@ -47,14 +47,13 @@ int notify_dispatcher(int index)
         sprintf(buff, "idx:%d", index);
         
         sendto(sockfd, (char * )&index , sizeof(index), 0, (SA *) &(disp_addr[i].server_addr), sizeof(SA));
-        debug("RECV_SEND: I notified thread:%d, sockfd=%d, message:%s\n", i, sockfd, buff);
+        //debug("RECV_SEND: I notified thread:%d, sockfd=%d, message:%s\n", i, sockfd, buff);
          
     return 0;
 }
 
 int udp_query_process(int sockfd)
 {
-    debug("udp_query_process\n");
 
     struct sockaddr_in client_addr;
     socklen_t addrLen;
@@ -86,7 +85,7 @@ int udp_query_process(int sockfd)
     ptrQuery->from = UDP;
 
     unsigned int index = querylist_add(&queries, ptrQuery);
-    debug("to be notified: index=%d\n", index);
+    //debug("to be notified: index=%d\n", index);
     notify_dispatcher(index);
 
     return 0;
@@ -110,7 +109,7 @@ int tcp_query_process(int sockfd)
         return -1;
     }
     lenRequest = ntohs(lenRequest);
-    debug("TCP request length:%d\n", lenRequest); 
+    //debug("TCP request length:%d\n", lenRequest); 
     char *pStr, query_buffer[NS_MAXMSG];
 
     bytes = readn(clientSock, query_buffer, lenRequest);
@@ -181,7 +180,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 
     int idx = queries.id_mapping[sockfd][id];
 
-    debug("id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
+    //debug("id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
     if( idx == -1 || id > 65535 ) 
     {
         error_report("Index error, id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
@@ -195,7 +194,6 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
        return -1; 
     }
     u_int16_t old_txid = qr->old_txid;
-    debug("old_txid=%x\n", old_txid);
     old_txid = htons(old_txid);
 
     //TODO 
