@@ -11,7 +11,8 @@
 typedef enum _operation { 
     Drop = 1, 
     Refuse = 2,
-    Forward =3
+    Forward =3,
+    Redirect = 4
 } Operation;
 
 typedef struct {

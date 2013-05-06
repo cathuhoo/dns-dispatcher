@@ -1,14 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h> 
-#include <unistd.h> //open, O_RDWR
-#include <fcntl.h>
-#include <signal.h>
-
+#include "common.h"
 #include "ini.h"
 #include "config.h"
-#include "common.h"
+#include "external.h"
 
 void daemonize_init()
 {
@@ -55,12 +48,12 @@ static int handler(void* user, const char* section, const char* name,
         if(pconfig->file_resolvers == NULL)
            pconfig->file_resolvers = strdup(value);
     } 
-    if (MATCH("main", "file_policy")) 
+    else if (MATCH("main", "file_policy")) 
     {
         if(pconfig->file_policy == NULL)
            pconfig->file_policy = strdup(value);
     } 
-    if (MATCH("main", "file_log")) 
+    else if (MATCH("main", "file_log")) 
     {
         if(pconfig->file_log == NULL)
            pconfig->file_log = strdup(value);
@@ -128,6 +121,8 @@ int config_load( Configuration * config )
         fprintf(stderr, "Configuration is NULL\n");
         return -1;
     }
+    if(config->daemonize) 
+        daemonize_init();
 
     if ( config->file_config != NULL) 
     {
@@ -163,9 +158,6 @@ int config_load( Configuration * config )
         fprintf(config->fd_pid, "%d" , getpid());
         fclose(config->fd_pid);
     }
-
-    if(config->daemonize) 
-        daemonize_init();
     
     return 0;
 }

@@ -1,13 +1,7 @@
-#include <stdio.h>
-
-#include <stdlib.h>
-#include <arpa/inet.h>
-#include <string.h>
-#include <math.h>
-
 #include "common.h"
 #include "mystring.h"
 #include "ip_prefix.h"
+#include "external.h"
 
 
 // addr is in host order (a value returned from ntohl()) 
@@ -56,12 +50,14 @@ int prefix_free( IPPrefix *prefix)
     int i;
     if (NULL == prefix )
         return 0;
-    if ( prefix -> prefix24)
+    if ( prefix->prefix24 != NULL)
     {
-        free( prefix -> prefix24);
+        debug("prefix->prefix24 freed\n");
+        free( prefix->prefix24);
     }
-    if ( prefix -> prefix32)
+    if ( prefix -> prefix32 != NULL)
     {
+        debug("prefix->prefix32 to be freed\n");
         for (i=0; i < MAX_HASH_32 ; i ++)
         {
             list_destroy( &prefix -> prefix32[i]);
@@ -180,9 +176,6 @@ int prefix_add(IPPrefix *prefix, char * ipstr, int mask, int rule_no)
     long  addr_h, addr_n, addr_i, pre;
     int i, sub, p;
 
-#ifdef DEBUG
-    fprintf(stdout, "prefix_add:%s\n", ipstr);
-#endif
     addr_h = inet_ptoh(ipstr, &addr_n);
 
     if (mask == 24) // add it directly in to prefix24
@@ -294,9 +287,6 @@ int prefix_load(char * file_name, IPPrefix * prefix, int rule_no)
         strtrim2(line, MAX_LINE, buffer);
         if( (line[0] == '#') || (line[0] == ';') || (line[0]=='\n') )
            continue;
-#ifdef DEBUG
-        fprintf(stdout, "DEBUG:%s\n", line);
-#endif
 
         if ( NULL== (pt=strchr(line, '/')))
         {

@@ -1,33 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <errno.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <sys/mman.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <sys/poll.h>
-#include <sys/wait.h>
-#include <sys/ioctl.h>
-#include <sys/param.h>
-#include <pthread.h>
-
 #include "common.h"
-#include "config.h"
 
 //Data Structures
 #include "resolvers.h"
@@ -39,15 +10,15 @@
 //Threads
 #include "recv_send.h"
 #include "dispatcher.h"
-//#include "sender.h"
 
 Configuration config;
 ResolverList resolvers;
 Policy policy;
 QueryList  queries;
-//char * un_names[MAX_RESOLVERS];
 
 Disp_info *disp_addr;
+
+//unsigned short  ** id_mapping ; //[MAX_SOCKFD][65536];
 
 
 void usage(char * self_name)
@@ -81,6 +52,7 @@ void signal_handler(int sig)
         if(config.file_log != NULL)
             fclose(config.fd_log);
 
+        querylist_free(&queries);
         resolver_list_free(&resolvers);
         policy_free(&policy);
         config_free(&config);
@@ -105,7 +77,6 @@ int main(int argc, char* argv[])
         {
             case 'c': 
                 config.file_config = strdup(optarg);
-                //remember to free  the memory of config_file 
                 break;
             case 'd': //daemonize 
                 config.daemonize=TRUE;
@@ -127,7 +98,6 @@ int main(int argc, char* argv[])
                 break;
             case 'p': //pid file
                 config.file_pid = strdup(optarg);
-                //remember to free  the memory 
                 break;
 
             case 'u': 
@@ -159,16 +129,13 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: load configuration file failed: %s.\n", config.file_config);
         exit(-1);
     }
-
-
     config_display(&config);
+    if(config.daemonize) 
+        daemonize_init();
 
     if(config.file_resolvers)
     {
         resolver_list_load(config.file_resolvers, &resolvers);
-        #ifdef DEBUG
-            resolver_list_travel(&resolvers);
-        #endif
     }
     else
     {
@@ -178,52 +145,33 @@ int main(int argc, char* argv[])
 
     if(NULL == config.file_policy)
     {
-        my_log("ERROR: no policy file in config file \n");    
+        fprintf(stderr, "ERROR: no policy file in config file \n");    
         error=1;
     }
     else
     {
         policy_load( "policy.txt", &policy, &resolvers);
-        #ifdef DEBUG
-            policy_travel( &policy);
-            TrieTravelE(policy.trie_dn);
-        #endif
         
     }
     if (!error)
     {
-        #ifdef DEBUG
-            long addr_h = inet_ptoh("166.111.1.1", NULL);
-            Action * pa = policy_lookup(&policy, addr_h, "mail.google.com");
-            printf("returned address pa=%p \n", pa);
-            if (pa != NULL)
-            {
-                printf("op:%d\n",pa->op);
-                printf("re:%s\n", pa->resolver->name);
-            }
-        #endif
 
         signal(SIGTERM,signal_handler); // catch kill Terminate signal 
         signal(SIGINT,signal_handler); // catch kill Interrupt signal 
         signal(SIGHUP,signal_handler); // catch kill Interrupt signal 
 
+
+        querylist_init(&queries);
+
         pthread_t tid_listener;
         pthread_t *tid_dispatchers;
-        pthread_t tid_sender;
 
-        //This is the main loop, which :
-        //  (1) recieves DNS queries from downstream client(users), and dispatches them to resolver_selectors ;  
-        //  (2) receives DNS replies from upstream   
-          
         // Some threads to select upstream resolvers according to policy and <src_ip, target_domain>
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
         disp_addr = malloc(sizeof(Disp_info) * config.num_threads);
         int i;
-        
         for( i=0; i < config.num_threads; i ++)
         {
-            //disp_addr.path_name[i] = malloc(MAX_WORD);
-            //sprintf(disp_addr[i].path_name,"/tmp/dispatcher_%d\n",i);             
             tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
             if(0 == tid_dispatchers[i]) 
             {
@@ -233,6 +181,7 @@ int main(int argc, char* argv[])
             }
         }
         
+        sleep(1);
         debug("After dispatcher, now ready to create recv_send threads\n");
         // A thread to recieve queries from clients, and replies to the clients
         tid_listener = recv_send();
@@ -240,17 +189,16 @@ int main(int argc, char* argv[])
         pthread_join(tid_listener, NULL);
         for( i=0; i < config.num_threads; i ++)
             pthread_join(tid_dispatchers[i], NULL);
-        pthread_join(tid_sender, NULL);
+        free(tid_dispatchers);
         //pthread_join(tid_listener, NULL);
     }
         
 
 error_out:
     fprintf(stderr, "Ooops! Clean memory of resolvers...\n");
+    querylist_free(&queries);
     resolver_list_free(&resolvers);
-    //fprintf(stderr, "Ooops! Clean memory of policy...\n");
-    //policy_free(&policy);
-    fprintf(stderr, "Ooops! Clean memory of config...\n");
+    policy_free(&policy);
     config_free(&config);
     return 0;
 }

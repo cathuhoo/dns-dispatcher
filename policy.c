@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <arpa/inet.h>
-
-
 #include "common.h"
 #include "mystring.h"
 //#include "list.h"
@@ -11,7 +5,7 @@
 #include "ip_prefix.h"
 #include "trie.h"
 #include "policy.h"
-
+#include "external.h"
 
 int rule_no(RuleSet set)
 {
@@ -59,40 +53,48 @@ int action_parse( Action * act, char * str, ResolverList * resolvers)
     tofree = str2 = strdup(str);
     token = strsep(&str2, DELIM2);
     if (token == NULL)
-       return -1;
-    else
     {
-        op=strtrim(token);
-        if ( 0 ==strcasecmp(op, "Drop") ) 
+        free(tofree); 
+        return -1;
+    }
+
+    op=strtrim(token);
+
+    if ( 0 ==strcasecmp(op, "Drop") ) 
+    {
+        free(tofree); 
+        act->op = Drop;
+        return 0;
+    }
+    else if ( 0 ==strcasecmp(op, "Refuse") ) 
+    {
+        free(tofree); 
+        act->op = Refuse;
+        return 0;
+    }
+    else if ( 0 ==strcasecmp(op, "Forward") ) 
+    {
+        act->op = Forward;
+        token = strsep( &str2, DELIM2);
+        resolver_name=strtrim(token);
+        Resolver * res = resolver_list_lookup(resolvers, resolver_name );
+        if (res == NULL)
         {
-            act->op = Drop;
-            return 0;
-        }
-        if ( 0 ==strcasecmp(op, "Refuse") ) 
-        {
-            act->op = Refuse;
-            return 0;
-        }
-        if ( 0 ==strcasecmp(op, "Forward") ) 
-        {
-            act->op = Forward;
-            token = strsep( &str2, DELIM2);
-            resolver_name=strtrim(token);
-            Resolver * res = resolver_list_lookup(resolvers, resolver_name );
-            if (res == NULL)
-            {
-                fprintf(stdout, "ERROR: No resolvers found for this rule:%s \n", str);
-                return -1;
-            }
-            act->resolver = res;
-            return 0;
-        }
-        else
-        {
-            fprintf(stdout, "ERROR: Unknow Operation %s \n", op);
+            free(tofree); 
+            fprintf(stdout, "ERROR: No resolvers found for this rule:%s \n", str);
             return -1;
         }
+        act->resolver = res;
+        free(tofree); 
+        return 0;
     }
+    else
+    {
+        free(tofree); 
+        fprintf(stdout, "ERROR: Unknow Operation %s \n", op);
+        return -1;
+    }
+    
     return -1;
 }
 Rule * rule_parse(char * line , ResolverList * resolvers)
@@ -162,6 +164,7 @@ int policy_free(Policy *policy)
             free(policy->rules[i]);
     }
     prefix_free(&policy->ip_prefix);
+    debug("trie_free\n");
     trie_free(policy->trie_dn);
     return 0;
 }
@@ -195,9 +198,6 @@ int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers)
         if( (line[0] == '#') || (line[0] == ';') || (line[0]=='\n') )
              continue;
 
-        #ifdef DEBUG 
-            fprintf(stdout, "parsing rule :%s\n" , line);
-        #endif
         if ( NULL == (rule = rule_parse(line, resolvers)))
         {
            fprintf(stdout, "ERROR: Parse policy file error, line %d: %s \n",
@@ -331,6 +331,7 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
     {
        rs2=*srch;
        //fprintf(stdout, "Domain Name:%s  found in trie, value:0x%lx\n", domain_name, rs2);
+        debug("domain :%s found in trie, value:0x%lx\n" ,domain_name, rs2);
     }
 
     int num = rule_no( *prs & rs2);
@@ -338,6 +339,7 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
     //return num;
     if (num < policy->size)
     {
+        debug("Policy matched rule #%d\n", num);
         Action *pa = &policy->rules[num]->action;
         return pa;
     }

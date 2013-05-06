@@ -1,7 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#include <stdio.h>
 
 #define BOOL unsigned char
 #define TRUE  1
@@ -44,6 +43,8 @@ typedef struct
     //int    (*log)(char );
 
 } Configuration;
+
+void daemonize_init();
 
 int config_load( Configuration * config );
 int config_set_default( Configuration * config);

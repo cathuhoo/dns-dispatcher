@@ -4,7 +4,10 @@
 #include <pthread.h>
 
 typedef struct _sock_info{
-    int sockfd;
+    int sockfd;// the recv_send thread create  and use this file discriptor  to communicate the dispatcher
+    struct sockaddr  server_addr;
+    int port;
+
     char  path_name[MAX_WORD];
     struct sockaddr_un *cliAddr;
 } Disp_info;

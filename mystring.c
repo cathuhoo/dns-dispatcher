@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "mystring.h"
 
 char * strReverse(char *srcStr, char* dstStr)
 {
@@ -39,7 +40,7 @@ char * strtrim(char *input)
 
 size_t strtrim2(char *out, size_t len, const char *src)
 {
-      if(len == 0)
+      if(len == 0 || src == NULL)
               return 0;
 
         const char *end;

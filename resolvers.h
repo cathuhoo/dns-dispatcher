@@ -2,7 +2,7 @@
 #define __HEAD_DNS_RESOLVER__
 
 #include "common.h"
-#include "list.h"
+//#include "list.h"
 
 typedef struct _resolver{
         char  name[MAX_WORD];      // the name of the dns resolver

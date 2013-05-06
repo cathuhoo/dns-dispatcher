@@ -8,6 +8,6 @@
 
 pthread_t recv_send(); //char *names[], int num); //Policy * policy, List *resolvers, Configuration *config);
 
-void * listen_thread_handler(void * arg);
+//static void * listen_thread_handler(void * arg);
 
 #endif

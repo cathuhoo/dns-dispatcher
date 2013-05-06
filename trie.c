@@ -1,6 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "common.h"
 #include "trie.h"
 #include "mystring.h"
 
@@ -137,7 +135,7 @@ trieVal_t * trie_search(trieNode_t * root, const char *key)
     trieNode_t * pt = NULL;
     char str_r[MAX_WORD], str_trim[MAX_WORD];
 
-    if ( root == NULL)
+    if ( root == NULL || key == NULL)
         return NULL;
 
     strtrim2(str_trim, MAX_WORD, key);

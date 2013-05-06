@@ -1,13 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "common.h"
-
-#include "list.h"
+//#include "list.h"
 #include "resolvers.h"
 #include "mystring.h"
-
+#include "external.h"
 
 Resolver * resolver_parse(char * line)
 {
@@ -59,6 +54,8 @@ Resolver * resolver_parse(char * line)
     }
 
     free(tofree);
+    pres->current_txid =1;
+    pres->sockfd = -1;
 
     return pres;
 }
@@ -121,7 +118,6 @@ void resolver_list_init( ResolverList *rl, void (*match)( void * key1, void * ke
     for (i=0; i< MAX_RESOLVERS; i++)
     {
         rl->resolvers[i] = NULL;
-        fprintf(stderr, "Init:Resolver [%d]: %p\n", i, rl->resolvers[i]);
     }
 }
 
@@ -195,6 +191,7 @@ void resolver_list_travel(ResolverList *rl)
 
 void resolver_list_free(ResolverList *rl) 
 {
+    debug("Resolvers are to be freed\n");
     if (rl == NULL)
         return ;
     int i;

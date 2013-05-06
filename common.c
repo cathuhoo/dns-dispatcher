@@ -1,3 +1,4 @@
+/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -28,6 +29,7 @@
 
 #include <pthread.h>
 #include <arpa/nameser.h>
+*/
 
 #include "common.h"
 
@@ -131,6 +133,25 @@ char * strTrim(char * s){
 
 //int CreateClientUnixSocket( char * server_path, int protocol, 
 
+int CreateUnixServerSocket(int addrFamily, int protocol, char * strPath, int port,  struct sockaddr * serv_addr )
+{
+    int listenfd;
+
+    struct sockaddr_un * servaddr = (struct sockaddr_un *)serv_addr;
+
+    listenfd = socket(AF_LOCAL, SOCK_STREAM, 0);
+
+    unlink(strPath);
+    bzero(servaddr, sizeof(struct sockaddr_un));
+    servaddr->sun_family = AF_LOCAL;
+    strcpy(servaddr->sun_path, strPath);
+    bind(listenfd, (SA *) servaddr, sizeof(struct sockaddr_un));
+    listen(listenfd, 5);
+
+    return listenfd;
+}
+
+
 int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int server_port, SA *saServAddr)
 {
     int sockfd, rcode;
@@ -175,7 +196,7 @@ int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int ser
     return -1;
 }
 
-int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port, struct sockaddr_in * server_addr )
+int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port, struct sockaddr * servaddr )
 {
     int socket_fd, rcode;
 
@@ -186,10 +207,11 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
                 strerror(errno), errno, __FILE__, __LINE__);
         return -1;
     }
-    bzero(server_addr, sizeof(struct sockaddr));
+    bzero(servaddr, sizeof(struct sockaddr));
     switch(addr_family){
         case AF_INET:
         {
+            struct sockaddr_in * server_addr = (struct sockaddr_in *) servaddr;
             server_addr->sin_family      = addr_family;
             long longAddr; 
             if(1 != inet_pton(AF_INET, str_addr, &longAddr))
@@ -223,7 +245,7 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr, int port,
         }
         case AF_LOCAL:
         {
-            struct sockaddr_un  *unp = (struct sockaddr_un *) server_addr;
+            struct sockaddr_un  *unp = (struct sockaddr_un *) servaddr;
             unlink(str_addr);
             unp->sun_family = AF_LOCAL;
             strcpy(unp->sun_path, str_addr);
@@ -318,7 +340,7 @@ unsigned long getMillisecond()
 int maximum(int array[], int size)
 {
     int i, max;
-    max=0;
+    max=INT_MIN;
     for (i=0; i < size; i++)
     {
         max= MAX2 (array[i], max);
@@ -326,6 +348,16 @@ int maximum(int array[], int size)
     return max;
 }
 
+int minimum(int array[], int size)
+{
+    int i, min;
+    min = INT_MAX;
+    for (i=0; i < size; i++)
+    {
+        min = array[i] > min ? min: array[i];
+    }
+    return min;
+}
 
 #ifdef	HAVE_SOCKADDR_DL_STRUCT
 #include	<net/if_dl.h>
