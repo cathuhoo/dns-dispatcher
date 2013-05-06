@@ -267,6 +267,8 @@ int forward_query_process(int sockfd)
     
     res->current_txid = (res->current_txid +1) & 0xFFFF; // mod 65536
 
+    if (res->current_txid == 0) // I don't like a zero id.
+            res->current_txid =1;
     
     return 0;
 }

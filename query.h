@@ -8,7 +8,7 @@
 #define QR Query_Record
 #define MAX_QUERY_ID 65535
 
-#define MAX_QUERY_NUM 0x200 
+#define MAX_QUERY_NUM 0x10000 
 
 typedef enum _process_flag {
     nonprocessed  =0,
