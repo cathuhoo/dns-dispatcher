@@ -94,6 +94,7 @@ typedef long RuleSet;
 #define ADDTOSET(set, element)  set = set | (1 << element) 
 #define CLEARSET(s)  s = s & 0x0
 
+ssize_t readn(int fd, void *vptr, size_t n);
 ssize_t  writen(int fd, const void *vptr, size_t n);
 
 int CreateUnixServerSocket(int addrFamily, int protocol, char * strPath, int port,  struct sockaddr * serv_addr );

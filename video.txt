@@ -1,4 +1,6 @@
+v.twitter.com
 f.youku.com
 *.tudou.com
 *.sina.com.cn
 youtube.com
+v.com

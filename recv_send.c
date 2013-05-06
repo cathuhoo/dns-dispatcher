@@ -25,6 +25,7 @@
  */
 
 static void * listen_thread_handler(void * arg);
+int tcp_request_process(int sockfd);
 
 pthread_t recv_send() //char * names[], int num) //List * resolvers, Configuration *config, QueryList * queries)
 {
@@ -38,7 +39,6 @@ pthread_t recv_send() //char * names[], int num) //List * resolvers, Configurati
     }
     return tid;
 }
-
 
 int notify_dispatcher(int index)
 {
@@ -70,11 +70,9 @@ int udp_query_process(int sockfd)
                                        (struct sockaddr * )&client_addr, &addrLen);
     
     #ifdef DEBUG
-        fprintf(stdout, "Got DNS Query from Client\n");
-        //addr_ntop_print(&client_addr);
         pStr = malloc(MAX_WORD);
         pStr=sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr),pStr, MAX_WORD);
-        debug("Client address:%s\n", pStr);
+        debug("Got DNS request , Client address:%s\n", pStr);
         free(pStr); 
     #endif 
     
@@ -95,10 +93,61 @@ int udp_query_process(int sockfd)
 
     return 0;
 } 
+int tcp_query_process(int sockfd)
+{
+    struct sockaddr_in client_addr;
+    socklen_t length = sizeof(struct sockaddr_in);
 
+    int clientSock = accept(sockfd, (SA*) &client_addr, &length); 
+    if( clientSock < 0)
+    {
+        fprintf(stderr, "Error on accept TCP connection from client\n");
+        return -1;
+    }
+    unsigned short lenRequest,bytes;
+    bytes = readn(clientSock, &lenRequest, 2);
+    if( bytes <2)
+    {
+        fprintf(stderr, "Error on reading length of request over TCP from client\n");
+        return -1;
+    }
+    lenRequest = ntohs(lenRequest);
+    debug("TCP request length:%d\n", lenRequest); 
+    char *pStr, query_buffer[NS_MAXMSG];
+
+    bytes = readn(clientSock, query_buffer, lenRequest);
+    if(bytes < lenRequest)
+    {
+        fprintf(stderr, "Error on reading DNS message over TCP from client\n");
+        return -1;
+    }
+    #ifdef DEBUG
+        pStr = malloc(MAX_WORD);
+        pStr=sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr),pStr, MAX_WORD);
+        debug("Got TCP request, Client address:%s\n", pStr);
+        free(pStr); 
+    #endif 
+
+    //Add the query to the query list
+    Query *ptrQuery = query_new( &client_addr, clientSock, query_buffer, lenRequest);
+ 
+    if (ptrQuery == NULL )  
+    {
+        error_report("Can not allocate memory for Query in TCP \n");
+        return -1;
+    }
+     
+    ptrQuery->from = TCP;
+
+    unsigned int index = querylist_add(&queries, ptrQuery);
+    debug("TCP request accept, to be notified: index=%d\n", index);
+    notify_dispatcher(index);
+
+    return 0;
+    
+}
 int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 {
-    debug("udp_reply_process, sockd=%d\n", sockfd);
     struct sockaddr_in server_addr;
     socklen_t addrLen;
     u_char response_buffer[NS_MAXMSG];
@@ -158,7 +207,11 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     }
     else if( qr->from == TCP)
     {
-        debug(" TCP query is not implemented now\n");
+        //write 2 bytes of the length of the response
+        unsigned short lenReply = htons(responseLen); 
+        int bytes = writen( qr->sockfd, &lenReply, 2); 
+        bytes = writen(qr->sockfd, response_buffer, responseLen); 
+        close(qr->sockfd);
     }
     else
     {
@@ -201,7 +254,7 @@ int forward_query_process(int sockfd)
     qr->status = forwarded; 
     qr->new_txid = res->current_txid;
 
-    debug( "send %d bytes to sock:%d, resolver:%s\n", bytes, res->sockfd, res->name);
+    debug("send %d bytes to sock:%d, resolver:%s\n", bytes, res->sockfd, res->name);
     debug("in foward process: id_mapping[%d][%d] = %d\n", res->sockfd, res->current_txid, num);
     
     res->current_txid = (res->current_txid +1) & 0xFFFF; // mod 65536
@@ -348,7 +401,7 @@ static void * listen_thread_handler(void * arg)
         if (FD_ISSET(tcpServiceFd, &read_fds) )
         {
        	    debug("Got DNS query from  tcpService(sockfd:%d).\n", tcpServiceFd);
-            //tcp_request_process();
+            tcp_query_process(tcpServiceFd);
         }
         
         // Request from upstream forwarders   
