@@ -78,11 +78,10 @@ int querylist_add(QueryList *ql, Query *query)
     { 
         unsigned long time_now = getMillisecond();  
         unsigned delta = time_now - ql->queries[i]->time_query;
-        debug("Queries[%d] is used, check timeout.. time passed:%d \n", i, delta);
 
         if(delta >TIME_OUT) 
         {
-            debug("Queries[%d](%s) timeouts,delete it \n", i, ql->queries[i]->qname);
+            my_log("Queries[%d](%s) timeouts, deleted \n", i, ql->queries[i]->qname);
             query_free(ql->queries[i]);
             break;
         }
@@ -94,7 +93,6 @@ int querylist_add(QueryList *ql, Query *query)
 
     ql->queries[i] = query;
     ql->cur = (i+1) % MAX_QUERY_NUM; 
-    debug ("added query to:queries[%d], next item:%d\n", i, ql->cur );
     return i; 
 }
 
@@ -124,7 +122,6 @@ int query_free(Query *pt)
 void querylist_free(QueryList *ql)
 {
     int i;
-    debug("querylist_free\n");
     for (i=0; i< MAX_QUERY_NUM; i++)
     {
         if( ql->queries[i] != NULL )
@@ -186,14 +183,15 @@ int query_parse(Query * q)
     char *name = ns_rr_name(rr);
     int len = strlen(name);
 
+/*
     char strAddr[MAX_WORD];
     sock_ntop((SA*) &(q->client_addr), sizeof(SA),  strAddr,sizeof(strAddr));
     //int srcPort = ntohs(q->client_addr.sin_port);
     debug("Q: from: %s name:%s(len=%d) id:%d len:%d\n", strAddr, name,len, id, q->queryLen  );
-     
+*/    
     if ( NULL == (q->qname = malloc( len+1 )))
     {
-        error_report("E: malloc for qname:%s error.\n", name);
+        my_log("Error: malloc for qname:%s error.\n", name);
         return -1;
     }
     strncpy(q->qname, name, len);

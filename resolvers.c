@@ -191,7 +191,6 @@ void resolver_list_travel(ResolverList *rl)
 
 void resolver_list_free(ResolverList *rl) 
 {
-    debug("Resolvers are to be freed\n");
     if (rl == NULL)
         return ;
     int i;

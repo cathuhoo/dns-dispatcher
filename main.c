@@ -23,15 +23,16 @@ Disp_info *disp_addr;
 
 void usage(char * self_name)
 {
+    //while( ( oc=getopt(argc, argv, "c:dhl:n:p:u:t:")) != -1 )
     fprintf(stderr,"%s [options...]\n", self_name);
     fprintf(stderr,"valid options:\n");
-    fprintf(stderr," -c <configuration_file>: default /usr/local/dadder/dadder.conf;\n");
-    fprintf(stderr," -d: daemonize, or run in background;\n");
-    fprintf(stderr," -l <log_file>: file to log message; this value can also be configured in confguration file.\n");
-    fprintf(stderr," -p <pid_file>: file to write pid; this value can also be configured in confguration file.\n");
+    fprintf(stderr," -c <configuration_file>\n");
+    fprintf(stderr," -d: daemonize, or run in background.\n");
     fprintf(stderr," -h: Help(this message).\n");
-     
-
+    fprintf(stderr," -l <log_file>: file to log message.\n");
+    fprintf(stderr," -p <pid_file>: file to write pid.\n");
+    fprintf(stderr," -t <tcp_port>: tcp port to listen.\n");
+    fprintf(stderr," -u <udp_port>: udp port to listen.\n");
 }
 
 void signal_handler(int sig)
@@ -129,7 +130,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "ERROR: load configuration file failed: %s.\n", config.file_config);
         exit(-1);
     }
-    config_display(&config);
+    //config_display(&config);
     if(config.daemonize) 
         daemonize_init();
 
@@ -150,7 +151,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        policy_load( "policy.txt", &policy, &resolvers);
+        if( 0> policy_load( "policy.txt", &policy, &resolvers))
+            error =1;
     }
     if (!error)
     {
@@ -165,7 +167,7 @@ int main(int argc, char* argv[])
         pthread_t tid_listener;
         pthread_t *tid_dispatchers;
 
-        // Some threads to select upstream resolvers according to policy and <src_ip, target_domain>
+        // Some threads to select upstream resolvers according to policy 
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
         disp_addr = malloc(sizeof(Disp_info) * config.num_threads);
         int i;
@@ -174,14 +176,12 @@ int main(int argc, char* argv[])
             tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
             if(0 == tid_dispatchers[i]) 
             {
-              error_report("Error: Cannot create dispatcher [%d]\n", i);  
-              error=1;
-              goto error_out;
+                free(tid_dispatchers);
+                error_report("Error: Cannot create dispatcher [%d]\n", i);  
+                goto error_out;
             }
         }
-        
         sleep(1);
-        debug("After dispatcher, now ready to create recv_send threads\n");
         // A thread to recieve queries from clients, and replies to the clients
         tid_listener = recv_send();
 
@@ -189,15 +189,13 @@ int main(int argc, char* argv[])
         for( i=0; i < config.num_threads; i ++)
             pthread_join(tid_dispatchers[i], NULL);
         free(tid_dispatchers);
-        //pthread_join(tid_listener, NULL);
     }
-        
 
 error_out:
-    fprintf(stderr, "Ooops! Clean memory of resolvers...\n");
+    fprintf(stderr, "Ooops! Free memory ...\n");
     querylist_free(&queries);
-    resolver_list_free(&resolvers);
     policy_free(&policy);
+    resolver_list_free(&resolvers);
     config_free(&config);
     return 0;
 }

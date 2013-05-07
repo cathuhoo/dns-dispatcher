@@ -70,7 +70,7 @@
 
    #define debug_point(msg) \
    {\
-       fprintf(config.fd_log,"SFSG:%s(%d):%s\n",__FILE__, __LINE__, msg);\
+       fprintf(config.fd_log,"So Far So Good:%s(%d):%s\n",__FILE__, __LINE__, msg);\
        fflush(config.fd_log);\
    } 
 #else
@@ -83,7 +83,6 @@
         fprintf(config.fd_log, fmt, ##__VA_ARGS__) ;\
         fflush(config.fd_log);  \
     }
-
 
 typedef long RuleSet;
 
@@ -100,11 +99,11 @@ ssize_t  writen(int fd, const void *vptr, size_t n);
 int CreateUnixServerSocket(int addrFamily, int protocol, char * strPath, int port,  struct sockaddr * serv_addr );
 int CreateClientSocket(int addr_family, char * server_address,int protocol, int server_port, SA *client_addr);
 // addr_family = AF_INET| AF_LOCAL
-//
+
 int CreateServerSocket(int addr_family, int protocol, char * str_addr,  int port, struct sockaddr * server_addr);
 // addr_family = AF_INET| AF_LOCAL
 // protocol = SOCK_STREAM| SOCK_DGRAM
-//
+
 
 unsigned long getMillisecond();
 int maximum(int array[], int size);
@@ -113,8 +112,6 @@ int minimum(int array[], int size);
 
 char * sock_ntop(const struct sockaddr *sa, socklen_t salen, char * str, int sizeStr);
 
-
-
 #define  error_report(fmt, ...)  \
     { \
         fprintf(stderr, fmt, ##__VA_ARGS__); fprintf(stderr, "%s(%d)\n",__FILE__, __LINE__); \
@@ -122,12 +119,3 @@ char * sock_ntop(const struct sockaddr *sa, socklen_t salen, char * str, int siz
 
 #endif
 
-/*
-#include "config.h"
-
-#include "resolvers.h"
-#include "policy.h"
-#include "ip_prefix.h"
-#include "trie.h"
-#include "query.h"
-*/

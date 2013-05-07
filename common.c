@@ -151,7 +151,8 @@ int CreateUnixServerSocket(int addrFamily, int protocol, char * strPath, int por
     return listenfd;
 }
 
-
+//Return sockfd on success
+//otherwise return -1;
 int CreateClientSocket(int addr_family, char * strServAddr,int protocol, int server_port, SA *saServAddr)
 {
     int sockfd, rcode;

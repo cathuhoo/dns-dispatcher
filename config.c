@@ -110,7 +110,7 @@ int config_set_default( Configuration * config)
     config->log_level = LOG_DEBUG ;
     config->num_threads = 3;
     config->daemonize = FALSE;
-    config->fd_log = stderr;
+    config->fd_log = stdout;
     
     return 0;
 }
@@ -121,8 +121,6 @@ int config_load( Configuration * config )
         fprintf(stderr, "Configuration is NULL\n");
         return -1;
     }
-    if(config->daemonize) 
-        daemonize_init();
 
     if ( config->file_config != NULL) 
     {
@@ -132,6 +130,8 @@ int config_load( Configuration * config )
             return -1;
         }
     }
+    if(config->daemonize) 
+        daemonize_init();
 
     if( config->file_log == NULL)
     {
@@ -158,7 +158,7 @@ int config_load( Configuration * config )
         fprintf(config->fd_pid, "%d" , getpid());
         fclose(config->fd_pid);
     }
-    
+
     return 0;
 }
 void config_display(Configuration * config)

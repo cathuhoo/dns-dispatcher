@@ -1,6 +1,7 @@
-#include "common.h"
+//#include "common.h"
+//#include "external.h"
+
 #include "dispatcher.h"
-#include "external.h"
 
 static void * dispatcher_thread_handler( void * args);
 
@@ -8,11 +9,7 @@ static void * dispatcher_thread_handler( void * args)
 {
     int index = *((int *) args);
 
-    debug("dispatcher :%d thread is running..\n", index);
-
     free(args);
-
-    //pthread_t tid_me = pthread_self();
 
     int listenfd;
     struct sockaddr_in client_addr, server_addr;
@@ -21,7 +18,6 @@ static void * dispatcher_thread_handler( void * args)
 
     int queryLen;
     int port_num = PORT_DISPATCHER + index;
-    debug("Thread[%d] wants to create port %d\n", index, port_num);
 
     listenfd = CreateServerSocket(AF_INET, SOCK_DGRAM, "127.0.0.1",  PORT_DISPATCHER + index,
                                    (struct sockaddr *)&server_addr); 
@@ -32,7 +28,7 @@ static void * dispatcher_thread_handler( void * args)
         disp_addr[index].port= -1; 
         return NULL; 
     }
-    //disp_addr[index].sockfd= listenfd;
+    //Tell the recv_send thread where I am
     disp_addr[index].port= port_num;
 
     fd_set read_fds;
@@ -48,7 +44,6 @@ static void * dispatcher_thread_handler( void * args)
         if (count < 0) //Maybe Interrupted, such as ^C pressed 
         {
             #ifdef DEBUG
-                debug(" Interrupted, count=%d\n", count);
                 break;
             #else
                 continue;
@@ -65,7 +60,6 @@ static void * dispatcher_thread_handler( void * args)
             #endif
             */
             continue;
-            //return NULL;
          }
             
         if (FD_ISSET(listenfd, &read_fds) )
@@ -75,21 +69,17 @@ static void * dispatcher_thread_handler( void * args)
             int num, rcode;
             queryLen = recvfrom(listenfd, (char *) &num , NS_MAXMSG, 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
-            debug("DISPATCHER: I recieved: %d bytes:%d\n", queryLen, num);
 
             Query *pQuery = queries.queries[num];  //querylist_lookup_byIndex(&queries,num);
             if (pQuery == NULL)
             {
-                error_report("Can not find query[%d]\n", num);
+                my_log("Error: Cannot find query[%d]\n", num);
                 continue; 
             }
             rcode = query_parse(pQuery);
-            if ( rcode != -1)
+            if ( rcode == -1)
             {
-            }  
-            else
-            {
-                error_report("Can't parse dispatch ");
+                my_log("Error: Can't parse query in dispatch\n");
                 continue;
             }
             long cAddr_h;
@@ -99,12 +89,12 @@ static void * dispatcher_thread_handler( void * args)
             cAddr_h = ntohl(pca->sin_addr.s_addr);
 
             Action *pAct = policy_lookup(&policy, cAddr_h, pQuery->qname);
-            resolver_display( pAct->resolver); 
+            //resolver_display( pAct->resolver); 
 
             if ( pAct == NULL)
             {
                 char  strAddr[MAX_WORD];
-                error_report("No Policy for this query(from %s for name:%s) \n", 
+                my_log("Error: No Policy for this query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
                 query_free(pQuery);
@@ -113,7 +103,7 @@ static void * dispatcher_thread_handler( void * args)
             if( pAct->op == Drop)
             {
                 char  strAddr[MAX_WORD];
-                error_report("Drop query query(from %s for name:%s) \n", 
+                my_log("Dropped query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
                 query_free(pQuery);
@@ -126,7 +116,7 @@ static void * dispatcher_thread_handler( void * args)
                 pQuery->op = pAct->op;
                 //notify the recv_send that this query is ready for forwarding
                 sendto( listenfd, (char *) &num, sizeof(num), 0, (SA*)&client_addr, addrLen); 
-                debug("Policy lookup finished for %d: %s \n", num, pQuery->qname );
+                //debug("Policy lookup finished for %d: %s \n", num, pQuery->qname );
             }
             
         }
@@ -144,7 +134,7 @@ pthread_t dispatcher(int idx )
     *pIndex = idx;
     if ( 0 != pthread_create(&tid, NULL, dispatcher_thread_handler, (void*)pIndex ))
     {
-        error_report("Cannot create thread for dispatcher\n");
+        my_log("Error: Cannot create thread for dispatcher\n");
         return 0;
     }
     return  tid;

@@ -52,12 +52,10 @@ int prefix_free( IPPrefix *prefix)
         return 0;
     if ( prefix->prefix24 != NULL)
     {
-        debug("prefix->prefix24 freed\n");
         free( prefix->prefix24);
     }
     if ( prefix -> prefix32 != NULL)
     {
-        debug("prefix->prefix32 to be freed\n");
         for (i=0; i < MAX_HASH_32 ; i ++)
         {
             list_destroy( &prefix -> prefix32[i]);

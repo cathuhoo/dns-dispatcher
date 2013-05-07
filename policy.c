@@ -1,6 +1,5 @@
 #include "common.h"
 #include "mystring.h"
-//#include "list.h"
 #include "resolvers.h"
 #include "ip_prefix.h"
 #include "trie.h"
@@ -81,7 +80,7 @@ int action_parse( Action * act, char * str, ResolverList * resolvers)
         if (res == NULL)
         {
             free(tofree); 
-            fprintf(stdout, "ERROR: No resolvers found for this rule:%s \n", str);
+            fprintf(stderr, "ERROR: No resolvers found for this rule:%s \n", str);
             return -1;
         }
         act->resolver = res;
@@ -91,7 +90,7 @@ int action_parse( Action * act, char * str, ResolverList * resolvers)
     else
     {
         free(tofree); 
-        fprintf(stdout, "ERROR: Unknow Operation %s \n", op);
+        fprintf(stderr, "ERROR: Unknow Operation %s \n", op);
         return -1;
     }
     
@@ -136,14 +135,14 @@ Rule * rule_parse(char * line , ResolverList * resolvers)
                 result = action_parse(&(pr->action), buffer, resolvers);
                 if (result )
                 {
-                    fprintf(stdout, "ERROR: Rule syntax error, unknow action: %s \n", buffer);
+                    fprintf(stderr, "ERROR: Rule syntax error, unknow action: %s \n", buffer);
                     free(pr);
                     free(tofree);
                     return NULL;
                 }
                 break;
              default :
-                fprintf(stdout, "ERROR: Rule syntax error, at line %s \n", buffer);
+                fprintf(stderr, "ERROR: Rule syntax error, at line %s \n", buffer);
                 free(pr);
                 free(tofree);
                 return NULL ;
@@ -164,7 +163,6 @@ int policy_free(Policy *policy)
             free(policy->rules[i]);
     }
     prefix_free(&policy->ip_prefix);
-    debug("trie_free\n");
     trie_free(policy->trie_dn);
     return 0;
 }
@@ -172,7 +170,7 @@ int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers)
 {
     FILE * fp;
     Rule * rule;
-    int num =0, i;
+    int num =0, i, rcode;
     char line[MAX_LINE], buffer[MAX_LINE];
 
     //list_init( policy, free, (void *) rule_display, NULL);
@@ -186,7 +184,7 @@ int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers)
 
     if( (fp= fopen(policy_file,"r")) == NULL)
     {
-        fprintf(stdout, "ERROR: Cannot open policy file:%s to read.\n", policy_file);
+        fprintf(stderr, "ERROR: Cannot open policy file:%s to read.\n", policy_file);
         return -1;
     }
 
@@ -211,10 +209,15 @@ int policy_load( char * policy_file, Policy * policy, ResolverList *resolvers)
     fclose(fp);
 
     prefix_init(&policy->ip_prefix);
-    policy_load_ipprefix(policy) ; //, &policy->ip_prefix);
 
-    policy->trie_dn = TrieInit();
-    policy_load_domain(policy) ; //, policy->trie_dn);
+    rcode = policy_load_ipprefix(policy) ; //, &policy->ip_prefix);
+    if(rcode <0) 
+        return rcode;
+
+    rcode = policy_load_domain(policy); //, policy->trie_dn);
+    if(rcode <0) 
+        return rcode;
+
     return 0;
 
 }
@@ -243,7 +246,7 @@ int policy_load_ipprefix( Policy * policy)//, IPPrefix * ip_prefix)
             int rcode = prefix_load( policy->rules[i]->src, &(policy->ip_prefix), i);
             if (rcode == -1)
             {
-                fprintf(stdout, "ERROR: policy_load_ipprefix, rule #%d\n", i);
+                fprintf(stderr, "ERROR: policy_load_ipprefix, rule #%d\n", i);
                 return -1;
             }
         }
@@ -283,11 +286,10 @@ int policy_load_domain( Policy * policy) //, trieNode_t * trie)
             int rcode = TrieLoad(policy->trie_dn, policy->rules[i]->dst, i);
             if (rcode == -1)
             {
-                fprintf(stdout, "ERROR: policy_load_domain, rule #%d\n", i);
+                fprintf(stderr, "ERROR: policy_load_domain, rule #%d\n", i);
                 return -1;
             }
-	    printf("After rule[%d], the Trie looks like:\n", i);
-	    TrieTravelE(policy->trie_dn);
+	    //TrieTravelE(policy->trie_dn);
         }
     }
     
@@ -312,15 +314,9 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
     prs = prefix_lookup(&policy->ip_prefix, &addr_h);
     if( prs == NULL)
     {
-        fprintf(stdout, "Domain Name:%s not found in trie\n", domain_name);
+        fprintf(stderr, "Domain Name:%s not found in trie\n", domain_name);
         return NULL;
     }
-    #ifdef DEBUG
-        long addr_n=htonl(addr_h);
-        char ipstr[MAX_WORD];
-        inet_ntop( AF_INET, &addr_n, ipstr, sizeof(ipstr));
-        fprintf(stdout, "IP:%s found in prefix, value:0x%lx\n" ,ipstr, *prs);
-    #endif
 
     trieVal_t * srch=NULL;
     srch = trie_search (policy->trie_dn, domain_name); 
@@ -333,7 +329,7 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
     {
        rs2=*srch;
        //fprintf(stdout, "Domain Name:%s  found in trie, value:0x%lx\n", domain_name, rs2);
-        debug("domain :%s found in trie, value:0x%lx\n" ,domain_name, rs2);
+        //debug("domain :%s found in trie, value:0x%lx\n" ,domain_name, rs2);
     }
 
     int num = rule_no( *prs & rs2);
@@ -341,7 +337,7 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
     //return num;
     if (num < policy->size)
     {
-        debug("Policy matched rule #%d\n", num);
+        //debug("Policy matched rule #%d\n", num);
         Action *pa = &policy->rules[num]->action;
         return pa;
     }
