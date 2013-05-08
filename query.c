@@ -110,6 +110,9 @@ int query_free(Query *pt)
     {
         free(pt->qname);
     }
+
+    if(pt->from == TCP )
+        close(pt->sockfd);
     
     if(pt->query)
     {
