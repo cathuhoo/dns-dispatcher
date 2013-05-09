@@ -27,21 +27,21 @@
  *  Forward the reply to right client, according to the item in the query list, if any;
  */
 
+static void * listen_thread_handler();
 
-pthread_t recv_send() //char * names[], int num) //List * resolvers, Configuration *config, QueryList * queries)
+pthread_t recv_send() 
 {
-
     pthread_t tid;
 
     if ( 0 != pthread_create(&tid, NULL, &listen_thread_handler, NULL))
     {
-        error_report("Cannot create thread for listener\n");
+        my_log("Error: Cannot create thread for listener\n");
         return 0;
     }
     return tid;
 }
 
-static void * listen_thread_handler(void * arg)
+static void * listen_thread_handler( )
 {
     fd_set read_fds;
     int *resolverSockFds;
@@ -56,7 +56,7 @@ static void * listen_thread_handler(void * arg)
     if(udpServiceFd < 0) 
     {
         my_log("Cannot create socket for udp service, service port=%d\n", config.service_port);
-        return NULL;
+        pthread_exit(NULL);
     }
 
     tcpServiceFd = CreateServerSocket(AF_INET, SOCK_STREAM, "0.0.0.0", config.tcpservice_port, 
@@ -64,7 +64,7 @@ static void * listen_thread_handler(void * arg)
     if(tcpServiceFd < 0) 
     {
         my_log("Cannot create socket for tcp service, service port=%d\n", config.tcpservice_port);
-        return NULL;
+        pthread_exit(NULL);
     }
 
     //Connect to all the resolvers
@@ -76,7 +76,8 @@ static void * listen_thread_handler(void * arg)
        if (sockfd == -1)  
        {
            my_log("Error: CreateClientSocket Error for resolver: %s\n", res->name);
-           return NULL; 
+           free(resolverSockFds);
+           pthread_exit(NULL);
        }
        else
        {
@@ -99,9 +100,10 @@ static void * listen_thread_handler(void * arg)
         sockfd = CreateClientSocket(AF_INET, "127.0.0.1", SOCK_DGRAM, port , (SA *)&server_addr);
         if (sockfd == -1)
         {
-            my_log("Error: Connect to dispatcher[%d] failed, port: %d \n", i, disp_addr[i].port);
-            free(resolverSockFds);
-            return NULL; 
+           my_log("Error: Connect to dispatcher[%d] failed, port: %d \n", i, disp_addr[i].port);
+           free(resolverSockFds);
+           free(dispatcherSockFds); 
+           pthread_exit(NULL);
         }
         else
         {
@@ -118,11 +120,13 @@ static void * listen_thread_handler(void * arg)
    int max_fd1 =  maximum(resolverSockFds, num_resolvers);
    int min_fd1 =  minimum(resolverSockFds, num_resolvers);
 
+   debug("To allocate memory for id_mapping(max_fd1 = %d)\n", max_fd1);
    if ( 0 > query_id_mapping_alloc(&queries, min_fd1, max_fd1))
     {
-        my_log("Error: Memory allocate error for id_mapping\n");
-        free(resolverSockFds);
-        return NULL;
+       my_log("Error: Memory allocate error for id_mapping\n");
+       free(resolverSockFds);
+       free(dispatcherSockFds); 
+       pthread_exit(NULL);
     }
    int max_fd2 =  maximum(dispatcherSockFds, config.num_threads);
 
@@ -134,6 +138,12 @@ static void * listen_thread_handler(void * arg)
        int count;
 	   struct timeval timeout={TIMEOUT,0};
 
+        if (parentRequestStop)
+        {
+            //debug("recv_send will quit now on request.\n"); 
+            break; 
+        }
+
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
        FD_SET(tcpServiceFd,&read_fds);
@@ -144,26 +154,13 @@ static void * listen_thread_handler(void * arg)
           FD_SET( dispatcherSockFds[i], &read_fds);
 
        count = select( max_fd, &read_fds, NULL, NULL, &timeout); 
-       //count = pselect( max_fd, &read_fds, NULL, NULL, NULL, &timeout); // &timeout); 
 
-       if (count < 0) //Maybe Interrupted, such as ^C pressed 
-       {
-            #ifdef DEBUG
-       		debug(" Interrupted, count=%d\n", count);
-                break;
-            #else
-                continue;
-            #endif
+        if (count < 0) //Maybe Interrupted, such as ^C pressed 
+        {
+           continue;
         }
         else if(count == 0) //No event in timeout 
         {
-            //do something, or continue...
-            /*
-            #ifdef DEBUG
-                fprintf(stdout, "listener is waiting ...\n");
-       		debug(" count=%d\n", count);
-            #endif
-            */
             continue;
         }
 
@@ -193,11 +190,12 @@ static void * listen_thread_handler(void * arg)
                 forward_query_process(dispatcherSockFds[i]); 
             }
         }
+        
    } //end for(;;)
-
    free(resolverSockFds);
    free(dispatcherSockFds); 
-   return NULL;
+   debug("RECV_SEND thread will exit\n");
+   pthread_exit(NULL);
 }
 
 int notify_dispatcher(int index)
@@ -221,10 +219,11 @@ int udp_query_process(int sockfd)
 
     memset(query_buffer, 0, sizeof(query_buffer));
     addrLen=sizeof(client_addr);
+
     queryLen = recvfrom(sockfd, query_buffer, NS_MAXMSG, 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
     sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr), pStr,sizeof(pStr));
-    my_log("Got UDP query from:%s\n", pStr);
+    my_log("Got UDP query from:%s, lenght=%d\n", pStr, queryLen);
     
     //Add the query to the query list
     Query *ptrQuery = query_new( &client_addr, sockfd, query_buffer, queryLen);
@@ -237,6 +236,7 @@ int udp_query_process(int sockfd)
      
     ptrQuery->from = UDP;
     int index = querylist_add(&queries, ptrQuery);
+    debug("+++++++queries[%d] is used now ++++++++++++++++++++Added\n", index)
     notify_dispatcher(index);
 
     return 0;
@@ -313,24 +313,13 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     sock_ntop((struct sockaddr *)&server_addr, sizeof(server_addr),pStr, sizeof(pStr));
     my_log("Got UDP Reply from: %s\n", pStr);
 
-   /* 
-    if (ns_initparse(response_buffer, responseLen, &handle) < 0)
-    {
-        my_log("Error: parse response error on ns_initparse: %s, queryLen:%d\n", 
-            strerror(errno),responseLen);
-        return -1;
-    }
-    u_int16_t id = ns_msg_id(handle);
-    */
-
     u_int16_t id;
     memcpy( &id,response_buffer,2);
     id=ntohs(id);
 
     int idx = queries.id_mapping[sockfd][id];
 
-    //debug("id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
-    if( idx == -1 || id > 65535 ) 
+    if( idx == -1 ) 
     {
         my_log("Error: Index error, id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
         return -1;
@@ -370,6 +359,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         int bytes = writen( qr->sockfd, &lenReply, 2); 
         if(bytes != 2) {
             my_log("Error: write length of TCP response error\n");
+            close(qr->sockfd);
             return -1;
         }
         bytes = writen(qr->sockfd, response_buffer, responseLen); 
@@ -395,6 +385,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 
     query_free( qr);
     queries.queries[idx] = NULL;
+    debug("-------Queries[%d] is Freed -------------------- FREE\n", idx)
     
     return 0;
 } 
@@ -409,6 +400,11 @@ int forward_query_process(int sockfd)
     bytes = recvfrom( sockfd, &num, sizeof(int), 0, (SA*) &src_addr, &len); 
 
     Query * qr = queries.queries[num];
+    if( qr == NULL)
+    {
+        my_log("Wierd: No query found  queries[%d]\n ", num);
+        return -1;
+    }
 
     Resolver *res = qr->resolver;
 

@@ -19,7 +19,7 @@ typedef struct _resolver{
         struct sockaddr_in server_addr;
         int sockfd;
 
-        int current_txid;
+        u_int16_t current_txid;
 
 
 } Resolver;

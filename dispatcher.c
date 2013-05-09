@@ -8,7 +8,6 @@ static void * dispatcher_thread_handler( void * args);
 static void * dispatcher_thread_handler( void * args)
 {
     int index = *((int *) args);
-
     free(args);
 
     int listenfd;
@@ -23,19 +22,31 @@ static void * dispatcher_thread_handler( void * args)
                                    (struct sockaddr *)&server_addr); 
     if( listenfd <0)
     {
-        fprintf(stderr, "Error: Cannot create server socket for dispatcher %d, port :%d \n", index, port_num);
+        my_log("Error: Cannot create server socket for dispatcher %d, port :%d \n", index, port_num);
         disp_addr[index].sockfd= -1; 
         disp_addr[index].port= -1; 
-        return NULL; 
+        pthread_exit(NULL); 
     }
-    //Tell the recv_send thread where I am
     disp_addr[index].port= port_num;
+    
+    //Tell the recv_send thread where I am ready
+    disp_addr[index].ready= TRUE;
+
+    debug("Dispatcher[%d] is ready\n", index);
 
     fd_set read_fds;
     int max = listenfd +1;
 
     for (;;)
     {
+        if (parentRequestStop)
+        {
+            debug("dispacher[%d] will quit now on request.\n", index);
+            break;
+        }
+        //disp_addr[index].ready= TRUE;
+        debug("Dispatcher[%d] is working...\n", index);
+
         FD_ZERO(&read_fds);
         FD_SET(listenfd, &read_fds);
         
@@ -43,24 +54,13 @@ static void * dispatcher_thread_handler( void * args)
         int count = select(max, &read_fds, NULL, NULL, &timeout);
         if (count < 0) //Maybe Interrupted, such as ^C pressed 
         {
-            #ifdef DEBUG
-                break;
-            #else
-                continue;
-            #endif
-         }
-
+            //break;
+            continue;
+        }
         if(count == 0) //No event in timeout 
         {
-            //do something, or continue...
-            /*
-            #ifdef DEBUG
-                 fprintf(stdout, "dispatcher is waiting ...\n");
-                 debug(" count=%d\n", count);
-            #endif
-            */
             continue;
-         }
+        }
             
         if (FD_ISSET(listenfd, &read_fds) )
         {
@@ -119,13 +119,13 @@ static void * dispatcher_thread_handler( void * args)
                 //debug("Policy lookup finished for %d: %s \n", num, pQuery->qname );
             }
             
-        }
+        } //IF(ISSET()
 
-    }  
+    }  //for(;;)
 
-   return NULL;
+   debug("Dispatcher thread[%d] will exit...\n", index);
+   pthread_exit(NULL);
 }
-
 
 pthread_t dispatcher(int idx )
 {

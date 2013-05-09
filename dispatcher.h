@@ -11,11 +11,10 @@ typedef struct _sock_info{
 
     char  path_name[MAX_WORD];
     struct sockaddr_un *cliAddr;
+    BOOL ready;
 } Disp_info;
 
 pthread_t dispatcher( int i ) ; //char * unix_sock_name);
-
-//static void * dispatcher_thread_handler( void * args);
 
 #include "external.h"
 

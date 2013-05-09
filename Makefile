@@ -19,7 +19,8 @@ all: $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) -o $@ $(OBJECTS)  $(LDFLAGS)
 
-%.o: %.c %.h common.h  query.h config.h policy.h 
+#%.o: %.c %.h common.h  query.h config.h policy.h  
+%.o: %.c *.h 
 	$(CC) $(CFLAGS) $< -o $@
 
 clean:

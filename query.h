@@ -8,7 +8,7 @@
 #define QR Query_Record
 #define MAX_QUERY_ID 65535
 
-#define MAX_QUERY_NUM 0x10000 
+#define MAX_QUERY_NUM 0x200 
 
 typedef enum _process_flag {
     nonprocessed  =0,
@@ -20,7 +20,7 @@ typedef enum _process_flag {
 
 typedef struct _query{
 
-    unsigned int  old_txid;
+    u_int16_t  old_txid;
     char          *qname;
     struct        sockaddr_in client_addr;
     void          *query;
@@ -38,8 +38,8 @@ typedef struct _query{
     Status        status; // not precess
     
 
-    void          *reply;
-    unsigned short replyLen;
+    //void          *reply;
+    //unsigned short replyLen;
 
 
 } Query;

@@ -11,15 +11,19 @@
 #include "recv_send.h"
 #include "dispatcher.h"
 
+//Global varables:
+
 Configuration config;
 ResolverList resolvers;
 Policy policy;
 QueryList  queries;
-
 Disp_info *disp_addr;
 
-//unsigned short  ** id_mapping ; //[MAX_SOCKFD][65536];
+BOOL  parentRequestStop;
 
+//only used in main.c 
+static pthread_t tid_recv_send;
+static pthread_t *tid_dispatchers;
 
 void usage(char * self_name)
 {
@@ -37,6 +41,7 @@ void usage(char * self_name)
 
 void signal_handler(int sig)
 {
+    int i;
     switch(sig) {
     
      case SIGHUP:
@@ -53,6 +58,17 @@ void signal_handler(int sig)
         if(config.file_log != NULL)
             fclose(config.fd_log);
 
+        parentRequestStop = TRUE;
+
+        sleep(TIMEOUT + 2); // wait for thread exit
+
+        pthread_join(tid_recv_send, NULL);
+
+        for( i=0; i < config.num_threads; i ++)
+            pthread_join(tid_dispatchers[i], NULL);
+
+        free(tid_dispatchers);
+        free(disp_addr);
         querylist_free(&queries);
         resolver_list_free(&resolvers);
         policy_free(&policy);
@@ -154,6 +170,7 @@ int main(int argc, char* argv[])
         if( 0> policy_load( "policy.txt", &policy, &resolvers))
             error =1;
     }
+
     if (!error)
     {
 
@@ -161,38 +178,59 @@ int main(int argc, char* argv[])
         signal(SIGINT,signal_handler); // catch kill Interrupt signal 
         signal(SIGHUP,signal_handler); // catch kill Interrupt signal 
 
-
         querylist_init(&queries);
-
-        pthread_t tid_listener;
-        pthread_t *tid_dispatchers;
+        parentRequestStop = FALSE;
 
         // Some threads to select upstream resolvers according to policy 
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
         disp_addr = malloc(sizeof(Disp_info) * config.num_threads);
+        memset(disp_addr, 0, sizeof(Disp_info) * config.num_threads);
+
         int i;
         for( i=0; i < config.num_threads; i ++)
         {
             tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
             if(0 == tid_dispatchers[i]) 
             {
+                free(disp_addr);
                 free(tid_dispatchers);
                 error_report("Error: Cannot create dispatcher [%d]\n", i);  
                 goto error_out;
             }
         }
-        sleep(1);
-        // A thread to recieve queries from clients, and replies to the clients
-        tid_listener = recv_send();
 
-        pthread_join(tid_listener, NULL);
+        
+        //Wait for dispatcher ready
+        for ( i=0 ; i < config.num_threads; i++)
+        {
+            while (! disp_addr[i].ready ) 
+            { 
+                debug("waiting for dispatcher[%d] \n", i);
+            }
+            debug("dispatcher [%d] OK\n", i);
+        }
+        
+        //sleep(1);
+
+        // A thread to recieve queries from clients, and replies to the clients
+        tid_recv_send = recv_send();
+
+        //Wait for recv_send thread_exit
+        pthread_join(tid_recv_send, NULL);
+
+        //Stop the dispatcher
+        parentRequestStop = TRUE;
+
+        //Wait for dispatcher thread_exit
         for( i=0; i < config.num_threads; i ++)
             pthread_join(tid_dispatchers[i], NULL);
         free(tid_dispatchers);
+        free(disp_addr);
     }
 
 error_out:
     fprintf(stderr, "Ooops! Free memory ...\n");
+    getchar();
     querylist_free(&queries);
     policy_free(&policy);
     resolver_list_free(&resolvers);

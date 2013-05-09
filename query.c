@@ -35,9 +35,13 @@ void query_id_mapping_free(QueryList *ql)
     for ( i = ql->min_fd ; i <= ql->max_fd; i++)
     {
         if (ql->id_mapping[i] != NULL)
+        {
             free(ql->id_mapping[i]);     
+            debug("id_mapping[%d] freed\n", i); 
+        }
     } 
     free( ql->id_mapping);
+    debug("top id_mapping freed"); 
 }
 
 Query * query_new (struct sockaddr_in *cli_addr, unsigned int sockfd, void * query_buffer, int queryLen)
@@ -45,7 +49,7 @@ Query * query_new (struct sockaddr_in *cli_addr, unsigned int sockfd, void * que
     Query *pt;
     if (  NULL == (pt = malloc(sizeof(Query))) )
     {
-        error_report("Error on malloc for Query\n");
+        my_log("Error on malloc for new Query\n");
         return NULL;
     }
     memset(pt, 0, sizeof(Query));
@@ -55,6 +59,7 @@ Query * query_new (struct sockaddr_in *cli_addr, unsigned int sockfd, void * que
     pt->sockfd = sockfd;
     if( NULL == (pt->query = malloc(queryLen)))
     {
+        my_log("Error: Cannot allocate memory for query_buffer\n");
         free(pt);
         return NULL;
     }
@@ -79,7 +84,7 @@ int querylist_add(QueryList *ql, Query *query)
         unsigned long time_now = getMillisecond();  
         unsigned delta = time_now - ql->queries[i]->time_query;
 
-        if(delta >TIME_OUT) 
+        if(delta >QUERY_TIMEOUT) 
         {
             my_log("Queries[%d](%s) timeouts, deleted \n", i, ql->queries[i]->qname);
             query_free(ql->queries[i]);
@@ -130,7 +135,8 @@ void querylist_free(QueryList *ql)
         if( ql->queries[i] != NULL )
             query_free(ql->queries[i]);
     }
-    //query_id_mapping_free(ql);
+    if(ql->id_mapping != NULL) 
+        query_id_mapping_free(ql);
 }
 int querylist_init( QueryList *ql)
 {

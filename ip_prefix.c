@@ -53,6 +53,7 @@ int prefix_free( IPPrefix *prefix)
     if ( prefix->prefix24 != NULL)
     {
         free( prefix->prefix24);
+        debug("I have freed prefix24 !!!!\n");
     }
     if ( prefix -> prefix32 != NULL)
     {
@@ -61,6 +62,7 @@ int prefix_free( IPPrefix *prefix)
             list_destroy( &prefix -> prefix32[i]);
         }
         free( prefix -> prefix32);
+        debug("I have freed prefix32 !!!!\n");
     }
 
     return 0;
