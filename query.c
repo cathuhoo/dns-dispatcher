@@ -37,11 +37,9 @@ void query_id_mapping_free(QueryList *ql)
         if (ql->id_mapping[i] != NULL)
         {
             free(ql->id_mapping[i]);     
-            debug("id_mapping[%d] freed\n", i); 
         }
     } 
     free( ql->id_mapping);
-    debug("top id_mapping freed"); 
 }
 
 Query * query_new (struct sockaddr_in *cli_addr, unsigned int sockfd, void * query_buffer, int queryLen)
@@ -207,6 +205,7 @@ int query_parse(Query * q)
     q->qname[len] = '\0';
     q->old_txid = id;
     q->time_query=getMillisecond();
+    sock_ntop((SA*) &(q->client_addr), sizeof(SA), q->str_client_addr, sizeof(q->str_client_addr));
   
     return 0;
 }

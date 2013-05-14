@@ -311,25 +311,36 @@ Action* policy_lookup(Policy * policy, long addr_h, char * domain_name  )
 {
     RuleSet *prs;
     RuleSet rs2;
+
+        
     prs = prefix_lookup(&policy->ip_prefix, &addr_h);
     if( prs == NULL)
     {
-        fprintf(stderr, "Domain Name:%s not found in trie\n", domain_name);
+        //fprintf(stderr, "IP address :%lx not found in IP prefix\n", addr_h);
         return NULL;
     }
+    //fprintf(stderr, "IP address :0x%lx found in IP prefix:0x%lx\n", 
+    //        addr_h, *prs);
 
-    trieVal_t * srch=NULL;
-    srch = trie_search (policy->trie_dn, domain_name); 
-    if( srch == NULL)
-    {
-        fprintf(stdout, "Domain Name:%s not found in trie\n", domain_name);
-        return NULL; 
-    }
+    if (domain_name == NULL)
+        rs2 = 0xFFFF;
     else
     {
-       rs2=*srch;
-       //fprintf(stdout, "Domain Name:%s  found in trie, value:0x%lx\n", domain_name, rs2);
-        //debug("domain :%s found in trie, value:0x%lx\n" ,domain_name, rs2);
+        trieVal_t * srch=NULL;
+        srch = trie_search (policy->trie_dn, domain_name); 
+        if( srch == NULL)
+        {
+            //return NULL; 
+            rs2 = 0xFFFF;
+            //fprintf(stdout, "Domain Name:%s not found in trie, give it:0x%lx\n", 
+             //       domain_name, rs2);
+        }
+        else
+        {
+           rs2=*srch;
+           //fprintf(stdout, "Domain Name:%s  found in trie, value:0x%lx\n", 
+           //         domain_name, rs2);
+        }
     }
 
     int num = rule_no( *prs & rs2);

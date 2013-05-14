@@ -44,8 +44,7 @@ static void * dispatcher_thread_handler( void * args)
             debug("dispacher[%d] will quit now on request.\n", index);
             break;
         }
-        //disp_addr[index].ready= TRUE;
-        debug("Dispatcher[%d] is working...\n", index);
+        //debug("Dispatcher[%d] is working...\n", index);
 
         FD_ZERO(&read_fds);
         FD_SET(listenfd, &read_fds);
@@ -123,7 +122,7 @@ static void * dispatcher_thread_handler( void * args)
 
     }  //for(;;)
 
-   debug("Dispatcher thread[%d] will exit...\n", index);
+   //debug("Dispatcher thread[%d] will exit...\n", index);
    pthread_exit(NULL);
 }
 

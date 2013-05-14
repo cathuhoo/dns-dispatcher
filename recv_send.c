@@ -113,14 +113,12 @@ static void * listen_thread_handler( )
         }
     }
 
-
    int max_fd;
    max_fd =  MAX2(udpServiceFd, tcpServiceFd);
 
    int max_fd1 =  maximum(resolverSockFds, num_resolvers);
    int min_fd1 =  minimum(resolverSockFds, num_resolvers);
 
-   debug("To allocate memory for id_mapping(max_fd1 = %d)\n", max_fd1);
    if ( 0 > query_id_mapping_alloc(&queries, min_fd1, max_fd1))
     {
        my_log("Error: Memory allocate error for id_mapping\n");
@@ -133,6 +131,7 @@ static void * listen_thread_handler( )
    max_fd =  MAX2(max_fd, max_fd1);
    max_fd =  MAX2(max_fd, max_fd2) +1 ;
 
+   debug("RECV_SEND thread is ready(max_fd1 = %d)\n", max_fd1);
    for (;;)
    {
        int count;
@@ -213,7 +212,7 @@ int udp_query_process(int sockfd)
 
     struct sockaddr_in client_addr;
     socklen_t addrLen;
-    char pStr[MAX_WORD], query_buffer[NS_MAXMSG];
+    char query_buffer[NS_MAXMSG];
 
     int queryLen; 
 
@@ -222,8 +221,12 @@ int udp_query_process(int sockfd)
 
     queryLen = recvfrom(sockfd, query_buffer, NS_MAXMSG, 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
+
+    /*
+    // Leave the log to dispatcher
     sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr), pStr,sizeof(pStr));
     my_log("Got UDP query from:%s, lenght=%d\n", pStr, queryLen);
+    */
     
     //Add the query to the query list
     Query *ptrQuery = query_new( &client_addr, sockfd, query_buffer, queryLen);
@@ -236,7 +239,7 @@ int udp_query_process(int sockfd)
      
     ptrQuery->from = UDP;
     int index = querylist_add(&queries, ptrQuery);
-    debug("+++++++queries[%d] is used now ++++++++++++++++++++Added\n", index)
+    //debug("+++++++queries[%d] is used now ++++++++++++++++++++Added\n", index)
     notify_dispatcher(index);
 
     return 0;
@@ -263,7 +266,7 @@ int tcp_query_process(int sockfd)
     }
     lenRequest = ntohs(lenRequest);
 
-    char pStr[MAX_WORD], query_buffer[NS_MAXMSG];
+    char query_buffer[NS_MAXMSG];
 
     bytes = readn(clientSock, query_buffer, lenRequest);
     if(bytes < lenRequest)
@@ -271,8 +274,10 @@ int tcp_query_process(int sockfd)
         my_log("Error on reading DNS message over TCP from client\n");
         return -1;
     }
+    /*
     sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr), pStr, sizeof(pStr));
     my_log("Got TCP query from:%s\n", pStr);
+    */
 
     //Add the query to the query list
     Query *ptrQuery = query_new( &client_addr, clientSock, query_buffer, lenRequest);
@@ -347,9 +352,9 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
                     errno, strerror(errno));
             return -1; 
         }
-        sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
-        my_log("Sent UDP reply to client:%s, txid(c):%d, txid(s):%d\n",
-                pStr, old_txid, id);
+        //sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
+        my_log("Sent UDP reply to client: %s for: %s , txid(c):%d, txid(s):%d\n",
+                qr->str_client_addr, qr->qname, old_txid, id);
                 
     }
     else if( qr->from == TCP)
@@ -370,9 +375,11 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         }
         close(qr->sockfd);
 
-        sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
-        my_log("Sent TCP reply to client:%s, txid(c):%d, txid(s):%d\n",
-                pStr, old_txid, id);
+        //sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
+        my_log("Sent TCP reply to client: %s for: %s , txid(c):%d, txid(s):%d\n",
+                qr->str_client_addr, qr->qname, old_txid, id);
+        //my_log("Sent TCP reply to client:%s, txid(c):%d, txid(s):%d\n",
+         //       qr->str_client_addr, old_txid, id);
     }
     else
     {
@@ -385,7 +392,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 
     query_free( qr);
     queries.queries[idx] = NULL;
-    debug("-------Queries[%d] is Freed -------------------- FREE\n", idx)
+    //debug("-------Queries[%d] is Freed -------------------- FREE\n", idx)
     
     return 0;
 } 
@@ -399,12 +406,18 @@ int forward_query_process(int sockfd)
     //read the index number in the query list from dispatcher
     bytes = recvfrom( sockfd, &num, sizeof(int), 0, (SA*) &src_addr, &len); 
 
+    if (num >=  MAX_QUERY_NUM)
+    {
+        my_log("ERROR: Query num index error\n"); 
+        return -1; 
+    }
     Query * qr = queries.queries[num];
     if( qr == NULL)
     {
         my_log("Wierd: No query found  queries[%d]\n ", num);
         return -1;
     }
+    my_log("Got query from:%s for: %s\n", qr->str_client_addr, qr->qname); 
 
     Resolver *res = qr->resolver;
 
@@ -419,7 +432,7 @@ int forward_query_process(int sockfd)
     qr->status = forwarded; 
     qr->new_txid = res->current_txid;
 
-    my_log("Send UDP Query to:%s, sockfd:%d, new_txid:%d, length:%d bytes\n",
+    my_log("Sent UDP Query to:%s, sockfd:%d, new_txid:%d, length:%d bytes\n",
             res->name, res->sockfd,  res->current_txid, bytes);
     
     res->current_txid = (res->current_txid +1) & 0xFFFF; // mod 65536

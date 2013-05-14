@@ -1,6 +1,6 @@
 blacklist_ip.txt| * | Drop
-*| smart_hosts.txt | Forward:dnsmasq
-*| blacklist_domain.txt| Forward:ccert
+* | smart_hosts.txt | Forward:dnsmasq
+tsinghua_ip.txt | blacklist_domain.txt.orig| Forward:ccert
 tsinghua_ip.txt| video.txt| Forward:telecom
 cernet_ip.txt| video.txt| Forward:telecom
-*| * | Forward:ccert 
+*| * | Forward:ccert

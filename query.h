@@ -23,6 +23,8 @@ typedef struct _query{
     u_int16_t  old_txid;
     char          *qname;
     struct        sockaddr_in client_addr;
+    char          str_client_addr[64];
+
     void          *query;
     unsigned short   queryLen;
     unsigned long time_query;

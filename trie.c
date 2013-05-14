@@ -41,12 +41,13 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
         return ;
     }
     pTrav = (*root) -> children;
-
+    
+    
     if (NULL != (pFound = TrieSearch(pTrav, key)))
     {
-        //printf("Duplicated !\n");
         // Unionify 
         pFound->value |= data ;
+        //printf("Now, the merged value: %x\n", pFound->value);
         return ; 
     }
 
@@ -99,7 +100,12 @@ void TrieAdd (trieNode_t ** root, char *key, trieVal_t data)
 
     //Now, create a new node, and add it to the rightmost of siblings
     //pTrav->next = TrieCreateNode( *key, 0xffffffff);
-    pTrav->next = TrieCreateNode( *key, DEFAULT_VALUE);
+    //pTrav->next = TrieCreateNode( *key, DEFAULT_VALUE);
+    pTrav->next = TrieCreateNode( *key, data);
+    //TODO: check this piece of code carefully later.
+    //Problems might still exist for substring insertion.
+    //If you insert a substring of an existing node,
+    //it will create a duplicated node
     pTrav->next->parent = pTrav->parent;
     pTrav->next->prev = pTrav;
 
@@ -331,6 +337,7 @@ int TrieLoad(trieNode_t * tree, char * file_name, int rule_no)
         printf("ERROR on open file :%s \n", file_name);
         return -1;
     }
+    //printf("Loading %s \n", file_name);
     while( fgets(line, MAX_WORD, fp) != NULL )
     {
         set = 0x0;
@@ -341,8 +348,12 @@ int TrieLoad(trieNode_t * tree, char * file_name, int rule_no)
         set = 1<< rule_no;
 
         strReverse(str, r_name);
+        //printf("to Add: %s, value=%x\n", str, set);
         TrieAdd(&tree, r_name, set); 
         //free(tofree);
+        //printf("after TrieAdd:%s\n", r_name);
+        //TrieTravelE( tree);
+
     }
     fclose(fp);
 

@@ -15,3 +15,10 @@
 *.exe
 *.out
 *.app
+
+#local data file 
+policy.txt
+resolvers.txt
+smart_hosts.txt
+blacklist_domain.txt
+video.txt

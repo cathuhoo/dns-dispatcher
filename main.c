@@ -84,11 +84,17 @@ int main(int argc, char* argv[])
 {
     int oc;
     int error=0;
-
     config_set_default(&config);
 
+    //For Policy Check only, useless for the whole service
+    BOOL policy_check = FALSE;
+    char * policy_check_ip , *policy_check_domain;
+    policy_check_ip = policy_check_domain =NULL;
+    //END Policy check
+    
+
     //The options in command line will not be overwritten by those in configuration file
-    while( ( oc=getopt(argc, argv, "c:dhl:n:p:u:t:")) != -1 )
+    while( ( oc=getopt(argc, argv, "c:dhl:n:p:u:t:D:I:P")) != -1 )
     {
         switch (oc)
         {
@@ -134,6 +140,18 @@ int main(int argc, char* argv[])
                     return -1;
                 }
                 break;
+            //For policy check only
+            case 'P': //daemonize 
+                policy_check=TRUE;
+                break;
+
+            case 'I': 
+                policy_check_ip = strdup(optarg);
+                break;
+
+            case 'D': 
+                policy_check_domain = strdup(optarg);
+                break;
 
             default:
                 usage(argv[0]);
@@ -168,7 +186,27 @@ int main(int argc, char* argv[])
     else
     {
         if( 0> policy_load( "policy.txt", &policy, &resolvers))
+        {
             error =1;
+            goto error_out;
+        }
+        /*
+       //Policy check 
+        if(policy_check)
+        {
+            long addr_h= ntohl(inet_addr(policy_check_ip));
+            char *domain_name = policy_check_domain; 
+            Action * act3 = policy_lookup(&policy, addr_h, domain_name); 
+            if( act3 !=NULL)
+            {
+                debug("For %s -> %s Action:%d, resolver:", 
+                    policy_check_ip, domain_name, act3->op);
+                if (act3->resolver != NULL)
+                    resolver_display(act3->resolver);
+            }
+            error=1; //exit
+        }
+        */
     }
 
     if (!error)
@@ -198,20 +236,17 @@ int main(int argc, char* argv[])
                 goto error_out;
             }
         }
-
         
         //Wait for dispatcher ready
         for ( i=0 ; i < config.num_threads; i++)
         {
             while (! disp_addr[i].ready ) 
             { 
-                debug("waiting for dispatcher[%d] \n", i);
+                //debug("waiting for dispatcher[%d] \n", i);
             }
-            debug("dispatcher [%d] OK\n", i);
+            //debug("dispatcher [%d] OK\n", i);
         }
         
-        //sleep(1);
-
         // A thread to recieve queries from clients, and replies to the clients
         tid_recv_send = recv_send();
 
@@ -229,8 +264,10 @@ int main(int argc, char* argv[])
     }
 
 error_out:
-    fprintf(stderr, "Ooops! Free memory ...\n");
-    getchar();
+    fprintf(stderr, "Ooops! It's too bad, Free memory ...\n");
+
+//    getchar();
+//clean_out:
     querylist_free(&queries);
     policy_free(&policy);
     resolver_list_free(&resolvers);
@@ -238,3 +275,26 @@ error_out:
     return 0;
 }
 
+void policy_check(char *ip, char *domain)
+{
+    long addr_h;
+    if ( ip != NULL)
+    {
+        addr_h= inet_addr(ip);
+        RuleSet *prs = prefix_lookup(&policy.ip_prefix, &addr_h);
+        if( prs == NULL)
+            fprintf(stderr, "IP address :%s (%lx) not found in IP prefix\n", 
+                    ip, addr_h);
+        else
+            fprintf(stderr, "IP address %s is in rules set:%lx \n", 
+                    ip, addr_h);
+    }
+    if (domain != NULL)
+    {
+
+    }
+    if ( ip != NULL && domain != NULL)
+    {
+    }
+
+}
