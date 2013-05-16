@@ -8,7 +8,7 @@
 #define QR Query_Record
 #define MAX_QUERY_ID 65535
 
-#define MAX_QUERY_NUM 0x200 
+#define MAX_QUERY_NUM 0x10000 
 
 typedef enum _process_flag {
     nonprocessed  =0,
@@ -88,9 +88,14 @@ int  query_parse( Query * query);
 unsigned int querylist_match( QueryList *ql, void * dns_reply, unsigned int sockfd);
 
 //the sender use it to free the memory allocated in the listener thread(with query_new);
+//free a pointer to a query
 int query_free(Query * query);
+
+//free all the list
 void querylist_free(QueryList *ql);
 
+//free an item
+void querylist_free_item(QueryList *ql, int idx);
 
 int query_id_mapping_alloc(QueryList *ql, int min, int max);
 void query_id_mapping_free(QueryList *ql);

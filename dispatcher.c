@@ -79,6 +79,8 @@ static void * dispatcher_thread_handler( void * args)
             if ( rcode == -1)
             {
                 my_log("Error: Can't parse query in dispatch\n");
+                //it should be freed here
+                querylist_free_item(&queries,num); 
                 continue;
             }
             long cAddr_h;
@@ -96,8 +98,9 @@ static void * dispatcher_thread_handler( void * args)
                 my_log("Error: No Policy for this query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
-                query_free(pQuery);
-                queries.queries[num]=NULL; 
+                //query_free(pQuery);
+                //queries.queries[num]=NULL; 
+                querylist_free_item(&queries,num); 
             } 
             if( pAct->op == Drop)
             {
@@ -105,8 +108,9 @@ static void * dispatcher_thread_handler( void * args)
                 my_log("Dropped query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
-                query_free(pQuery);
-                queries.queries[num]=NULL; 
+                //query_free(pQuery);
+                //queries.queries[num]=NULL; 
+                querylist_free_item(&queries,num); 
             }
             else if ( pAct->op == Forward || pAct->op == Refuse || pAct->op == Redirect )
             {

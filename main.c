@@ -10,6 +10,7 @@
 //Threads
 #include "recv_send.h"
 #include "dispatcher.h"
+#include "clean_timeout.h"
 
 //Global varables:
 
@@ -20,9 +21,10 @@ QueryList  queries;
 Disp_info *disp_addr;
 
 BOOL  parentRequestStop;
+pthread_mutex_t query_mutex[MAX_QUERY_NUM]; 
 
 //only used in main.c 
-static pthread_t tid_recv_send;
+static pthread_t tid_recv_send, tid_timeout;
 static pthread_t *tid_dispatchers;
 
 void usage(char * self_name)
@@ -219,12 +221,18 @@ int main(int argc, char* argv[])
         querylist_init(&queries);
         parentRequestStop = FALSE;
 
+        int i;
+        for(i = 0; i < MAX_QUERY_NUM; i ++ ) 
+        {
+            //query_mutex[0] = PTHREAD_MUTEX_INITIALIZER;
+            pthread_mutex_init(&query_mutex[i], NULL);
+        }
+
         // Some threads to select upstream resolvers according to policy 
         tid_dispatchers = malloc(sizeof(pthread_t) * config.num_threads);
         disp_addr = malloc(sizeof(Disp_info) * config.num_threads);
         memset(disp_addr, 0, sizeof(Disp_info) * config.num_threads);
 
-        int i;
         for( i=0; i < config.num_threads; i ++)
         {
             tid_dispatchers[i] = dispatcher(i);  //disp_addr[i]->path_name);
@@ -242,7 +250,7 @@ int main(int argc, char* argv[])
         {
             while (! disp_addr[i].ready ) 
             { 
-                //debug("waiting for dispatcher[%d] \n", i);
+                debug("waiting for dispatcher[%d] \n", i);
             }
             //debug("dispatcher [%d] OK\n", i);
         }
@@ -250,8 +258,13 @@ int main(int argc, char* argv[])
         // A thread to recieve queries from clients, and replies to the clients
         tid_recv_send = recv_send();
 
+        // A thread to clean up all timeout queries 
+        debug("clean_time thread begin");
+        tid_timeout = clean_timeout();
+
         //Wait for recv_send thread_exit
         pthread_join(tid_recv_send, NULL);
+        pthread_join(tid_timeout, NULL);
 
         //Stop the dispatcher
         parentRequestStop = TRUE;

@@ -296,6 +296,55 @@ int tcp_query_process(int sockfd)
     return 0;
     
 }
+
+int forward_query_process(int sockfd)
+{
+    unsigned int num, bytes;
+    struct sockaddr_in src_addr;
+    socklen_t len = sizeof(src_addr);
+
+    //read the index number in the query list from dispatcher
+    bytes = recvfrom( sockfd, &num, sizeof(int), 0, (SA*) &src_addr, &len); 
+
+    if (num >=  MAX_QUERY_NUM)
+    {
+        my_log("ERROR: Query num index error\n"); 
+        return -1; 
+    }
+    Query * qr = queries.queries[num];
+    if( qr == NULL)
+    {
+        my_log("Wierd: No query found  queries[%d]\n ", num);
+        return -1;
+    }
+    my_log("Got query from:%s for: %s, len:%d\n", 
+            qr->str_client_addr, qr->qname,qr->queryLen); 
+
+    Resolver *res = qr->resolver;
+
+    //modify query: change the txid to res->current_txid
+    u_int16_t new_id = htons(res->current_txid);
+    memcpy(qr->query, &new_id, 2);
+
+    bytes = sendto(res->sockfd, qr->query, qr->queryLen, 0,
+                   (struct sockaddr *) &(res->server_addr), sizeof(struct sockaddr_in));
+
+    queries.id_mapping[res->sockfd][res->current_txid] = num;
+    qr->status = forwarded; 
+    qr->new_txid = res->current_txid;
+
+    my_log("Sent UDP Query to:%s, sockfd:%d, new_txid:%d, length:%d bytes\n",
+            res->name, res->sockfd,  res->current_txid, bytes);
+    
+    res->current_txid = (res->current_txid +1) & 0xFFFF; // mod 65536
+
+    if (res->current_txid == 0) // I don't like a zero id.
+            res->current_txid =1;
+    
+    return 0;
+}
+
+
 int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 {
     struct sockaddr_in server_addr;
@@ -330,12 +379,16 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         return -1;
     }
 
+    pthread_mutex_lock(&query_mutex[idx]);
+
     Query * qr = queries.queries[idx];
     if( qr == NULL) // No query exists for this reply. 
     {
         my_log("Warning: no query for this response, txid=%d\n", id);
+        pthread_mutex_unlock(&query_mutex[idx]);
        return -1; 
     }
+
     u_int16_t old_txid = qr->old_txid;
     old_txid = htons(old_txid);
 
@@ -350,6 +403,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         {
             my_log("Error: Error on send reply to client , errno=%d, message:%s\n",
                     errno, strerror(errno));
+            pthread_mutex_unlock(&query_mutex[idx]);
             return -1; 
         }
         //sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
@@ -364,82 +418,37 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         int bytes = writen( qr->sockfd, &lenReply, 2); 
         if(bytes != 2) {
             my_log("Error: write length of TCP response error\n");
-            close(qr->sockfd);
+                    close(qr->sockfd);
+            pthread_mutex_unlock(&query_mutex[idx]);
             return -1;
         }
         bytes = writen(qr->sockfd, response_buffer, responseLen); 
         if(bytes <0) {
             my_log("Error: write TCP response error\n");
             close(qr->sockfd);
+            pthread_mutex_unlock(&query_mutex[idx]);
             return -1;
         }
         close(qr->sockfd);
-
-        //sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
         my_log("Sent TCP reply to client: %s for: %s , txid(c):%d, txid(s):%d\n",
                 qr->str_client_addr, qr->qname, old_txid, id);
-        //my_log("Sent TCP reply to client:%s, txid(c):%d, txid(s):%d\n",
-         //       qr->str_client_addr, old_txid, id);
     }
+    pthread_mutex_unlock(&query_mutex[idx]);
+    /*
     else
     {
         //This code should never be reached.
         my_log("Error: Neigther from TCP nor UDP! \n");
-        query_free( qr);
-        queries.queries[idx] = NULL;
+        querylist_free_item(&queries, idx);
         return -1;
     }
+    */
 
-    query_free( qr);
-    queries.queries[idx] = NULL;
+    querylist_free_item(&queries, idx);
+    //query_free( qr);
+    //queries.queries[idx] = NULL;
     //debug("-------Queries[%d] is Freed -------------------- FREE\n", idx)
     
     return 0;
 } 
-
-int forward_query_process(int sockfd)
-{
-    unsigned int num, bytes;
-    struct sockaddr_in src_addr;
-    socklen_t len = sizeof(src_addr);
-
-    //read the index number in the query list from dispatcher
-    bytes = recvfrom( sockfd, &num, sizeof(int), 0, (SA*) &src_addr, &len); 
-
-    if (num >=  MAX_QUERY_NUM)
-    {
-        my_log("ERROR: Query num index error\n"); 
-        return -1; 
-    }
-    Query * qr = queries.queries[num];
-    if( qr == NULL)
-    {
-        my_log("Wierd: No query found  queries[%d]\n ", num);
-        return -1;
-    }
-    my_log("Got query from:%s for: %s\n", qr->str_client_addr, qr->qname); 
-
-    Resolver *res = qr->resolver;
-
-    //modify query: change the txid to res->current_txid
-    u_int16_t new_id = htons(res->current_txid);
-    memcpy(qr->query, &new_id, 2);
-
-    bytes = sendto(res->sockfd, qr->query, qr->queryLen, 0,
-                   (struct sockaddr *) &(res->server_addr), sizeof(struct sockaddr_in));
-
-    queries.id_mapping[res->sockfd][res->current_txid] = num;
-    qr->status = forwarded; 
-    qr->new_txid = res->current_txid;
-
-    my_log("Sent UDP Query to:%s, sockfd:%d, new_txid:%d, length:%d bytes\n",
-            res->name, res->sockfd,  res->current_txid, bytes);
-    
-    res->current_txid = (res->current_txid +1) & 0xFFFF; // mod 65536
-
-    if (res->current_txid == 0) // I don't like a zero id.
-            res->current_txid =1;
-    
-    return 0;
-}
 

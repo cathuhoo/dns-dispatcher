@@ -17,7 +17,7 @@
 *.app
 
 #local data file 
-policy.txt
+#policy.txt
 resolvers.txt
 smart_hosts.txt
 blacklist_domain.txt

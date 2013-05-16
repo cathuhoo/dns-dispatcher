@@ -85,7 +85,8 @@ int querylist_add(QueryList *ql, Query *query)
         if(delta >QUERY_TIMEOUT) 
         {
             my_log("Queries[%d](%s) timeouts, deleted \n", i, ql->queries[i]->qname);
-            query_free(ql->queries[i]);
+            //query_free(ql->queries[i]);
+            querylist_free_item(ql, i);
             break;
         }
         else
@@ -125,13 +126,27 @@ int query_free(Query *pt)
     free(pt);
     return 0;
 }
+void querylist_free_item(QueryList *ql, int idx)
+{
+
+    pthread_mutex_lock(&query_mutex[idx]);
+        if( ql->queries[idx] != NULL )
+        {
+                query_free(ql->queries[idx]);
+                ql->queries[idx] = NULL;
+        }
+    pthread_mutex_unlock(&query_mutex[idx]);
+}
+
+//free all the memory used by query list
 void querylist_free(QueryList *ql)
 {
     int i;
     for (i=0; i< MAX_QUERY_NUM; i++)
     {
-        if( ql->queries[i] != NULL )
-            query_free(ql->queries[i]);
+        //if( ql->queries[i] != NULL )
+        //    query_free(ql->queries[i]);
+        querylist_free_item(ql, i);
     }
     if(ql->id_mapping != NULL) 
         query_id_mapping_free(ql);
