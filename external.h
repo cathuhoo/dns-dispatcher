@@ -14,6 +14,7 @@ extern Policy policy;
 extern QueryList queries;
 extern Disp_info *disp_addr;
 BOOL  parentRequestStop;
+BOOL  parentRequestPause;
 pthread_mutex_t query_mutex[MAX_QUERY_NUM];
 
 #endif

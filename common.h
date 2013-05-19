@@ -56,9 +56,9 @@
 #define TIME_SLEEP 15 //seconds
 
 
-#define TIMEOUT 5 //seconds, for select, and signal_handler 
+#define TIMEOUT 15 //seconds, for select, and signal_handler 
 
-#define QUERY_TIMEOUT 1000 //ms , for clean up old query items
+#define QUERY_TIMEOUT 5000 //ms , for clean up old query items
 
 #ifdef DEBUG
    #define debug(fmt, ...)  \

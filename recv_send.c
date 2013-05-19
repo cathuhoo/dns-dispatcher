@@ -1,12 +1,3 @@
-/*
-#include "common.h"
-#include "query.h"
-#include "list.h"
-#include "policy.h"
-#include "config.h"
-#include "external.h"
-*/
-
 #include "recv_send.h"
 
 /* 
@@ -21,7 +12,7 @@
  *  2. select and notify a dispatcher thread to select the right resolver
  *
  * When a notification  comes from the dispatcher
- *  Forward the query to the selected resolver
+ *  Forward the query to the selected upstream resolver
  *
  * When a DNS reply comes from an upstream resolver, this thread will:  
  *  Forward the reply to right client, according to the item in the query list, if any;
@@ -142,6 +133,7 @@ static void * listen_thread_handler( )
             //debug("recv_send will quit now on request.\n"); 
             break; 
         }
+        while(parentRequestPause){};
 
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
@@ -199,11 +191,14 @@ static void * listen_thread_handler( )
 
 int notify_dispatcher(int index)
 {
-        int i = index % config.num_threads; //dispatcher number
-        sendto(disp_addr[i].sockfd, (char * )&index , sizeof(index), 0, 
-                (SA *) &(disp_addr[i].server_addr), sizeof(SA));
-        
-        //debug("RECV_SEND: I notified thread:%d, sockfd=%d\n", i, disp_addr[i].sockfd);
+    int i = index % config.num_threads; //dispatcher number
+    int bytes = sendto(disp_addr[i].sockfd, (char * )&index , sizeof(index), 0, 
+	  		(SA *) &(disp_addr[i].server_addr), sizeof(SA));
+    if (bytes < sizeof(index))
+    {
+	my_log("Error: notify_dispatcher sendto error: bytes=%d\n", bytes);
+	return -1;
+    }
     return 0;
 }
 
@@ -222,12 +217,6 @@ int udp_query_process(int sockfd)
     queryLen = recvfrom(sockfd, query_buffer, NS_MAXMSG, 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
 
-    /*
-    // Leave the log to dispatcher
-    sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr), pStr,sizeof(pStr));
-    my_log("Got UDP query from:%s, lenght=%d\n", pStr, queryLen);
-    */
-    
     //Add the query to the query list
     Query *ptrQuery = query_new( &client_addr, sockfd, query_buffer, queryLen);
  
@@ -239,7 +228,6 @@ int udp_query_process(int sockfd)
      
     ptrQuery->from = UDP;
     int index = querylist_add(&queries, ptrQuery);
-    //debug("+++++++queries[%d] is used now ++++++++++++++++++++Added\n", index)
     notify_dispatcher(index);
 
     return 0;
@@ -274,10 +262,6 @@ int tcp_query_process(int sockfd)
         my_log("Error on reading DNS message over TCP from client\n");
         return -1;
     }
-    /*
-    sock_ntop((struct sockaddr *)&client_addr, sizeof(client_addr), pStr, sizeof(pStr));
-    my_log("Got TCP query from:%s\n", pStr);
-    */
 
     //Add the query to the query list
     Query *ptrQuery = query_new( &client_addr, clientSock, query_buffer, lenRequest);
@@ -299,14 +283,14 @@ int tcp_query_process(int sockfd)
 
 int forward_query_process(int sockfd)
 {
-    unsigned int num, bytes;
+    int num, bytes;
     struct sockaddr_in src_addr;
     socklen_t len = sizeof(src_addr);
 
     //read the index number in the query list from dispatcher
-    bytes = recvfrom( sockfd, &num, sizeof(int), 0, (SA*) &src_addr, &len); 
+    bytes = recvfrom( sockfd, &num, sizeof(num), 0, (SA*) &src_addr, &len); 
 
-    if (num >=  MAX_QUERY_NUM)
+    if ( num <0 || num >=  MAX_QUERY_NUM)
     {
         my_log("ERROR: Query num index error\n"); 
         return -1; 
@@ -317,8 +301,8 @@ int forward_query_process(int sockfd)
         my_log("Wierd: No query found  queries[%d]\n ", num);
         return -1;
     }
-    my_log("Got query from:%s for: %s, len:%d\n", 
-            qr->str_client_addr, qr->qname,qr->queryLen); 
+    my_log("Got query from:%s for: %s, len:%d, set to queries[%d]\n", 
+            qr->str_client_addr, qr->qname,qr->queryLen, num); 
 
     Resolver *res = qr->resolver;
 
@@ -406,9 +390,8 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             pthread_mutex_unlock(&query_mutex[idx]);
             return -1; 
         }
-        //sock_ntop((SA *)& qr->client_addr, sizeof(SA), pStr,sizeof(pStr));
-        my_log("Sent UDP reply to client: %s for: %s , txid(c):%d, txid(s):%d\n",
-                qr->str_client_addr, qr->qname, old_txid, id);
+        my_log("Sent UDP reply to client: %s for: %s , txid(c):%d, txid(s):%d, queries[%d].\n",
+                qr->str_client_addr, qr->qname, old_txid, id, idx);
                 
     }
     else if( qr->from == TCP)
@@ -430,24 +413,12 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             return -1;
         }
         close(qr->sockfd);
-        my_log("Sent TCP reply to client: %s for: %s , txid(c):%d, txid(s):%d\n",
-                qr->str_client_addr, qr->qname, old_txid, id);
+        my_log("Sent TCP reply to client: %s for: %s , txid(c):%d, txid(s):%d, queries[%d]\n",
+                qr->str_client_addr, qr->qname, old_txid, id, idx);
     }
     pthread_mutex_unlock(&query_mutex[idx]);
-    /*
-    else
-    {
-        //This code should never be reached.
-        my_log("Error: Neigther from TCP nor UDP! \n");
-        querylist_free_item(&queries, idx);
-        return -1;
-    }
-    */
 
     querylist_free_item(&queries, idx);
-    //query_free( qr);
-    //queries.queries[idx] = NULL;
-    //debug("-------Queries[%d] is Freed -------------------- FREE\n", idx)
     
     return 0;
 } 

@@ -80,7 +80,7 @@ int querylist_add(QueryList *ql, Query *query)
     while (ql->queries[i] != NULL)
     { 
         unsigned long time_now = getMillisecond();  
-        unsigned delta = time_now - ql->queries[i]->time_query;
+        unsigned long delta = time_now - ql->queries[i]->time_query;
 
         if(delta >QUERY_TIMEOUT) 
         {

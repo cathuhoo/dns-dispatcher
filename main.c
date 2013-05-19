@@ -21,10 +21,11 @@ QueryList  queries;
 Disp_info *disp_addr;
 
 BOOL  parentRequestStop;
+BOOL  parentRequestPause;
 pthread_mutex_t query_mutex[MAX_QUERY_NUM]; 
 
 //only used in main.c 
-static pthread_t tid_recv_send, tid_timeout;
+static pthread_t tid_recv_send; //, tid_timeout;
 static pthread_t *tid_dispatchers;
 
 void usage(char * self_name)
@@ -47,30 +48,33 @@ void signal_handler(int sig)
     switch(sig) {
     
      case SIGHUP:
+        parentRequestPause = TRUE;
+        sleep(TIMEOUT+1); // wait for threads to pause 
         if(config.file_log !=NULL)
         {
             fclose(config.fd_log);
             config.fd_log=fopen(config.file_log,"a");
         }
+        parentRequestPause = FALSE;
        break;
 
      case SIGINT:
      case SIGTERM:
         debug("Signal terminate(SIGTERM), free memory and bye.\n");
+        parentRequestStop = TRUE;
+        sleep(TIMEOUT + 2); // wait for thread exit
+
         if(config.file_log != NULL)
             fclose(config.fd_log);
 
-        parentRequestStop = TRUE;
-
-        sleep(TIMEOUT + 2); // wait for thread exit
-
         pthread_join(tid_recv_send, NULL);
-
         for( i=0; i < config.num_threads; i ++)
             pthread_join(tid_dispatchers[i], NULL);
-
         free(tid_dispatchers);
         free(disp_addr);
+
+        //pthread_join(tid_timeout, NULL);
+
         querylist_free(&queries);
         resolver_list_free(&resolvers);
         policy_free(&policy);
@@ -89,9 +93,9 @@ int main(int argc, char* argv[])
     config_set_default(&config);
 
     //For Policy Check only, useless for the whole service
-    BOOL policy_check = FALSE;
-    char * policy_check_ip , *policy_check_domain;
-    policy_check_ip = policy_check_domain =NULL;
+    //BOOL policy_check = FALSE;
+    //char  *policy_check_ip, *policy_check_domain;
+    //policy_check_ip = policy_check_domain =NULL;
     //END Policy check
     
 
@@ -142,7 +146,8 @@ int main(int argc, char* argv[])
                     return -1;
                 }
                 break;
-            //For policy check only
+            //For policy check only, useless for running
+	   /*
             case 'P': //daemonize 
                 policy_check=TRUE;
                 break;
@@ -154,6 +159,7 @@ int main(int argc, char* argv[])
             case 'D': 
                 policy_check_domain = strdup(optarg);
                 break;
+	    */
 
             default:
                 usage(argv[0]);
@@ -192,23 +198,6 @@ int main(int argc, char* argv[])
             error =1;
             goto error_out;
         }
-        /*
-       //Policy check 
-        if(policy_check)
-        {
-            long addr_h= ntohl(inet_addr(policy_check_ip));
-            char *domain_name = policy_check_domain; 
-            Action * act3 = policy_lookup(&policy, addr_h, domain_name); 
-            if( act3 !=NULL)
-            {
-                debug("For %s -> %s Action:%d, resolver:", 
-                    policy_check_ip, domain_name, act3->op);
-                if (act3->resolver != NULL)
-                    resolver_display(act3->resolver);
-            }
-            error=1; //exit
-        }
-        */
     }
 
     if (!error)
@@ -220,6 +209,7 @@ int main(int argc, char* argv[])
 
         querylist_init(&queries);
         parentRequestStop = FALSE;
+        parentRequestPause = FALSE;
 
         int i;
         for(i = 0; i < MAX_QUERY_NUM; i ++ ) 
@@ -259,12 +249,13 @@ int main(int argc, char* argv[])
         tid_recv_send = recv_send();
 
         // A thread to clean up all timeout queries 
-        debug("clean_time thread begin");
-        tid_timeout = clean_timeout();
+        //debug("clean_time thread begin");
+        //tid_timeout = clean_timeout();
 
         //Wait for recv_send thread_exit
         pthread_join(tid_recv_send, NULL);
-        pthread_join(tid_timeout, NULL);
+
+        //pthread_join(tid_timeout, NULL);
 
         //Stop the dispatcher
         parentRequestStop = TRUE;
@@ -287,7 +278,7 @@ error_out:
     config_free(&config);
     return 0;
 }
-
+/*
 void policy_check(char *ip, char *domain)
 {
     long addr_h;
@@ -311,3 +302,4 @@ void policy_check(char *ip, char *domain)
     }
 
 }
+*/

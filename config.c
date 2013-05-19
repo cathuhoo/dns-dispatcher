@@ -139,7 +139,7 @@ int config_load( Configuration * config )
     }
     else
     {
-        config->fd_log = fopen(config->file_log, "a");
+        config->fd_log = fopen(config->file_log, "w");
         if( config->fd_log ==NULL) 
         {
             fprintf(stderr, "ERROR: unable to open log file: %s to write(append).\n", config->file_log);

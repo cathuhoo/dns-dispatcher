@@ -36,15 +36,18 @@ static void * dispatcher_thread_handler( void * args)
 
     fd_set read_fds;
     int max = listenfd +1;
+    int num, rcode;
+    
 
     for (;;)
     {
         if (parentRequestStop)
         {
-            debug("dispacher[%d] will quit now on request.\n", index);
+            //debug("dispacher[%d] will quit now on request.\n", index);
             break;
         }
         //debug("Dispatcher[%d] is working...\n", index);
+	while(parentRequestPause){};
 
         FD_ZERO(&read_fds);
         FD_SET(listenfd, &read_fds);
@@ -65,10 +68,16 @@ static void * dispatcher_thread_handler( void * args)
         {
             memset(query_buffer, 0, sizeof(query_buffer));
             addrLen=sizeof(client_addr);
-            int num, rcode;
-            queryLen = recvfrom(listenfd, (char *) &num , NS_MAXMSG, 0,
+            //queryLen = recvfrom(listenfd, (char *) &num , NS_MAXMSG, 0,
+            queryLen = recvfrom(listenfd, (char *) &num , sizeof(num), 0,
                                        (struct sockaddr * )&client_addr, &addrLen);
 
+	    if( queryLen < 2 || num <0 || num >= MAX_QUERY_NUM) 
+	    {
+		my_log("Error: read index of query error, len=%d, num=%d\n",
+			queryLen, num);
+		continue;
+	    }
             Query *pQuery = queries.queries[num];  //querylist_lookup_byIndex(&queries,num);
             if (pQuery == NULL)
             {
@@ -92,22 +101,25 @@ static void * dispatcher_thread_handler( void * args)
             Action *pAct = policy_lookup(&policy, cAddr_h, pQuery->qname);
             //resolver_display( pAct->resolver); 
 
+            //char  strAddr[MAX_WORD];
             if ( pAct == NULL)
             {
-                char  strAddr[MAX_WORD];
+		/*
                 my_log("Error: No Policy for this query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
+		*/
                 //query_free(pQuery);
                 //queries.queries[num]=NULL; 
                 querylist_free_item(&queries,num); 
             } 
             if( pAct->op == Drop)
             {
-                char  strAddr[MAX_WORD];
+		/*
                 my_log("Dropped query(from %s for name:%s) \n", 
                             sock_ntop((SA*) &(pQuery->client_addr), sizeof(SA), strAddr, sizeof(strAddr)),
                             pQuery->qname);
+		*/
                 //query_free(pQuery);
                 //queries.queries[num]=NULL; 
                 querylist_free_item(&queries,num); 

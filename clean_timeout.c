@@ -10,23 +10,26 @@ static void * clean_timeout_handler()
     while (! parentRequestStop )
     {
         int i;
-        sleep(30);
-        debug("clean timeout thread is working...\n");
+        sleep(TIMEOUT * 2);
+	//sleep(0);
+	while(parentRequestPause){};
+        //debug("clean timeout thread is working...\n");
         for ( i=0; i< MAX_QUERY_NUM; i++)
         {
             Query * qr = queries.queries[i]; 
             if (qr == NULL) 
                 continue;
             unsigned long time_now = getMillisecond();
-            unsigned      delta = time_now - qr->time_query;
+            unsigned long delta = time_now - qr->time_query;
             if(delta >QUERY_TIMEOUT)
             {
-                my_log("Queries[%d](%s) timeouts, free by clean thread\n", i, qr->qname);
+                my_log("Queries[%d](%s) timeouts:%ld, free by clean thread\n",
+				 i, qr->qname,delta);
                 querylist_free_item(&queries, i);
             }
         }
     } 
-    debug(" clean thread ready to exit\n");
+    debug("clean thread ready to exit\n");
     pthread_exit(NULL);
 }
 
