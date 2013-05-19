@@ -138,7 +138,7 @@ static void * dispatcher_thread_handler( void * args)
 
     }  //for(;;)
 
-   //debug("Dispatcher thread[%d] will exit...\n", index);
+   debug("Dispatcher thread[%d] will exit...\n", index);
    pthread_exit(NULL);
 }
 

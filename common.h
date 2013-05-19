@@ -64,6 +64,7 @@
    #define debug(fmt, ...)  \
    { \
        fprintf(config.fd_log, "Debug: "); \
+       print_time (config.fd_log);\
        fprintf(config.fd_log, fmt, ##__VA_ARGS__);\
        fflush(config.fd_log); \
    }   
@@ -80,6 +81,7 @@
 
 #define my_log(fmt, ...) \
     {\
+        print_time (config.fd_log);\
         fprintf(config.fd_log, fmt, ##__VA_ARGS__) ;\
         fflush(config.fd_log);  \
     }
@@ -106,6 +108,7 @@ int CreateServerSocket(int addr_family, int protocol, char * str_addr,  int port
 
 
 unsigned long getMillisecond();
+void  print_time(FILE * fd);
 int maximum(int array[], int size);
 int minimum(int array[], int size);
 

@@ -71,7 +71,11 @@ ssize_t  writen(int fd, const void *vptr, size_t n)
             if (nwritten < 0 && errno == EINTR)
                 nwritten = 0;       // and call write() again 
             else
+            {
+                //fprintf(stderr, "Error in writen: %s(%d)\n",
+                //        strerror(errno), errno);
                 return(-1);         // error 
+            }
         }
 
         nleft -= nwritten;

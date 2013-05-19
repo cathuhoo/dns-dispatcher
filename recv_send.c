@@ -240,6 +240,11 @@ int tcp_query_process(int sockfd)
 
     int clientSock = accept(sockfd, (SA*) &client_addr, &length); 
 
+    struct linger ling;
+    ling.l_onoff = 1;          
+    ling.l_linger = 0; //TIMEOUT;
+    setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+
     if( clientSock < 0)
     {
         my_log("Error on accept TCP connection from client\n");
@@ -286,6 +291,7 @@ int forward_query_process(int sockfd)
     int num, bytes;
     struct sockaddr_in src_addr;
     socklen_t len = sizeof(src_addr);
+    char *strProto;
 
     //read the index number in the query list from dispatcher
     bytes = recvfrom( sockfd, &num, sizeof(num), 0, (SA*) &src_addr, &len); 
@@ -301,8 +307,10 @@ int forward_query_process(int sockfd)
         my_log("Wierd: No query found  queries[%d]\n ", num);
         return -1;
     }
-    my_log("Got query from:%s for: %s, len:%d, set to queries[%d]\n", 
-            qr->str_client_addr, qr->qname,qr->queryLen, num); 
+    strProto = ((qr->from == TCP) ? "TCP":"UDP"); 
+
+    my_log("Got %s query from:%s for: %s, len:%d, set to queries[%d]\n", 
+            strProto, qr->str_client_addr, qr->qname,qr->queryLen, num); 
 
     Resolver *res = qr->resolver;
 
@@ -357,7 +365,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
 
     int idx = queries.id_mapping[sockfd][id];
 
-    if( idx == -1 ) 
+    if( idx == -1 || idx >= MAX_QUERY_NUM ) 
     {
         my_log("Error: Index error, id_mapping[%d][%x] = %d\n", sockfd, id, idx); 
         return -1;
@@ -407,7 +415,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
         }
         bytes = writen(qr->sockfd, response_buffer, responseLen); 
         if(bytes <0) {
-            my_log("Error: write TCP response error\n");
+            my_log("Error: write TCP response error, client must have closed its socket.\n");
             close(qr->sockfd);
             pthread_mutex_unlock(&query_mutex[idx]);
             return -1;
@@ -417,7 +425,6 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
                 qr->str_client_addr, qr->qname, old_txid, id, idx);
     }
     pthread_mutex_unlock(&query_mutex[idx]);
-
     querylist_free_item(&queries, idx);
     
     return 0;

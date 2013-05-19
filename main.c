@@ -25,7 +25,7 @@ BOOL  parentRequestPause;
 pthread_mutex_t query_mutex[MAX_QUERY_NUM]; 
 
 //only used in main.c 
-static pthread_t tid_recv_send; //, tid_timeout;
+static pthread_t tid_recv_send, tid_timeout;
 static pthread_t *tid_dispatchers;
 
 void usage(char * self_name)
@@ -58,6 +58,11 @@ void signal_handler(int sig)
         parentRequestPause = FALSE;
        break;
 
+     case SIGPIPE:
+        //debug("SIGPIPE signal catched!\n");
+
+        break;
+
      case SIGINT:
      case SIGTERM:
         debug("Signal terminate(SIGTERM), free memory and bye.\n");
@@ -73,7 +78,7 @@ void signal_handler(int sig)
         free(tid_dispatchers);
         free(disp_addr);
 
-        //pthread_join(tid_timeout, NULL);
+        pthread_join(tid_timeout, NULL);
 
         querylist_free(&queries);
         resolver_list_free(&resolvers);
@@ -206,6 +211,7 @@ int main(int argc, char* argv[])
         signal(SIGTERM,signal_handler); // catch kill Terminate signal 
         signal(SIGINT,signal_handler); // catch kill Interrupt signal 
         signal(SIGHUP,signal_handler); // catch kill Interrupt signal 
+        signal(SIGPIPE,signal_handler); // catch kill Interrupt signal 
 
         querylist_init(&queries);
         parentRequestStop = FALSE;
@@ -250,12 +256,12 @@ int main(int argc, char* argv[])
 
         // A thread to clean up all timeout queries 
         //debug("clean_time thread begin");
-        //tid_timeout = clean_timeout();
+        tid_timeout = clean_timeout();
 
         //Wait for recv_send thread_exit
         pthread_join(tid_recv_send, NULL);
 
-        //pthread_join(tid_timeout, NULL);
+        pthread_join(tid_timeout, NULL);
 
         //Stop the dispatcher
         parentRequestStop = TRUE;
