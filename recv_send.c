@@ -240,9 +240,10 @@ int tcp_query_process(int sockfd)
 
     int clientSock = accept(sockfd, (SA*) &client_addr, &length); 
 
+    //Clean the TIME_WAIT state
     struct linger ling;
     ling.l_onoff = 1;          
-    ling.l_linger = 0; //TIMEOUT;
+    ling.l_linger = 1; //TIMEOUT;
     setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
 
     if( clientSock < 0)
