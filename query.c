@@ -94,9 +94,10 @@ int querylist_add(QueryList *ql, Query *query)
             i =(i+1) % MAX_QUERY_NUM;
         }
     }
-
+//TODO lock
     ql->queries[i] = query;
     ql->cur = (i+1) % MAX_QUERY_NUM; 
+//unlock
     return i; 
 }
 
@@ -184,6 +185,8 @@ int query_parse(Query * q)
     if (ns_initparse(q->query, q->queryLen, &handle) < 0)
     {
         error_report("E: parse query error on ns_initparse: %s, queryLen:%d\n", strerror(errno),q->queryLen);
+	//herror ? some time  error report:
+	//E: parse query error on ns_initparse: Message too long, queryLen:46 query.c(186)
         return -1;
     }
 

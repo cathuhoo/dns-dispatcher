@@ -261,7 +261,7 @@ int main(int argc, char* argv[])
         //Wait for recv_send thread_exit
         pthread_join(tid_recv_send, NULL);
 
-        pthread_join(tid_timeout, NULL);
+        //pthread_join(tid_timeout, NULL);
 
         //Stop the dispatcher
         parentRequestStop = TRUE;
