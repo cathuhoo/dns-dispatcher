@@ -311,6 +311,7 @@ int forward_query_process(int sockfd)
     {
         my_log("Wierd: No query found  queries[%d]\n ", num);
     	pthread_mutex_unlock(&query_mutex[num]);
+    	debug("Forward Query: Lock on %d released\n", num);
         return -1;
     }
     strProto = ((qr->from == TCP) ? "TCP":"UDP"); 
@@ -340,6 +341,7 @@ int forward_query_process(int sockfd)
             res->current_txid =1;
     
     pthread_mutex_unlock(&query_mutex[num]);
+    debug("Forward Query: Lock on %d released\n", num);
     return 0;
 }
 
@@ -385,6 +387,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     {
         my_log("Warning: no query for this response, txid=%d\n", id);
         pthread_mutex_unlock(&query_mutex[idx]);
+    	debug("Lock on %d released\n", idx);
        return -1; 
     }
 
@@ -403,6 +406,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: Error on send reply to client , errno=%d, message:%s\n",
                     errno, strerror(errno));
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1; 
         }
         my_log("Sent UDP reply to client: %s for: %s , txid(c):%d, txid(s):%d, queries[%d].\n",
@@ -418,6 +422,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: write length of TCP response error\n");
                     close(qr->sockfd);
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1;
         }
         bytes = writen(qr->sockfd, response_buffer, responseLen); 
@@ -425,6 +430,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: write TCP response error, client must have closed its socket.\n");
             close(qr->sockfd);
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1;
         }
         close(qr->sockfd);
@@ -434,6 +440,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     query_free(qr);
     queries.queries[idx]=NULL;
     pthread_mutex_unlock(&query_mutex[idx]);
+    debug("Lock on %d released\n", idx);
     //querylist_free_item(&queries, idx);
     
     return 0;
