@@ -243,7 +243,7 @@ int tcp_query_process(int sockfd)
     struct linger ling;
     ling.l_onoff = 1;          
     ling.l_linger = 0; //TIMEOUT;
-    setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+    setsockopt(clientSock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
 
     if( clientSock < 0)
     {

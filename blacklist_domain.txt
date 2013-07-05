@@ -13060,7 +13060,7 @@ apigee.com
 nuclear-coffee.com
 www.myiphide.com
 vpnworldwide.com
-youtube.com
+*youtube.com
 livebebe.com
 www.unblockmyspace.com
 hiuxd.com
@@ -13250,7 +13250,7 @@ crd-net.org
 freetibet.org
 md-t.org
 freenetproject.org
-torproject.org
+*torproject.org
 dastrasibeetelaat.org
 www.6park.com.sixxs.org
 bignews.org
@@ -13425,12 +13425,4 @@ ems09.your-freedom.de
 ems18.your-freedom.de
 ems08.your-freedom.de
 ems28.your-freedom.de
-blacklist_domain.org
-a.b.c.d
-b.c.d
-c.d
-0.c.d
-1.c.d
-c.d
-d
-
+iqlinkus.com
