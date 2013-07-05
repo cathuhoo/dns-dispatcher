@@ -1,6 +1,10 @@
 blacklist_ip.txt| * | Drop
 * | smart_hosts.txt | Forward:dnsmasq
+<<<<<<< HEAD
 * | blacklist_domain.txt| Forward:local_dadder
+=======
+#* | blacklist_domain.txt| Forward:ccert
+>>>>>>> f82c24e940bbdaa4be0bfabfbdae69810168a68c
 tsinghua_ip.txt| video.txt| Forward:telecom
 cernet_ip.txt| video.txt| Forward:telecom
 *| * | Forward:ccert

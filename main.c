@@ -78,7 +78,7 @@ void signal_handler(int sig)
         free(tid_dispatchers);
         free(disp_addr);
 
-        pthread_join(tid_timeout, NULL);
+        //pthread_join(tid_timeout, NULL);
 
         querylist_free(&queries);
         resolver_list_free(&resolvers);
@@ -256,12 +256,12 @@ int main(int argc, char* argv[])
 
         // A thread to clean up all timeout queries 
         //debug("clean_time thread begin");
-        tid_timeout = clean_timeout();
+        //tid_timeout = clean_timeout();
 
         //Wait for recv_send thread_exit
         pthread_join(tid_recv_send, NULL);
 
-        pthread_join(tid_timeout, NULL);
+        //pthread_join(tid_timeout, NULL);
 
         //Stop the dispatcher
         parentRequestStop = TRUE;

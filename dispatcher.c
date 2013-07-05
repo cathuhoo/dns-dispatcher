@@ -74,22 +74,25 @@ static void * dispatcher_thread_handler( void * args)
 
 	    if( queryLen < 2 || num <0 || num >= MAX_QUERY_NUM) 
 	    {
-		my_log("Error: read index of query error, len=%d, num=%d\n",
-			queryLen, num);
+		//my_log("Error: read index of query error, len=%d, num=%d\n",
+		//		queryLen, num);
 		continue;
 	    }
+	
+	  
+	    
             Query *pQuery = queries.queries[num];  //querylist_lookup_byIndex(&queries,num);
             if (pQuery == NULL)
             {
-                my_log("Error: Cannot find query[%d]\n", num);
+                //my_log("Error: Cannot find query[%d]\n", num);
                 continue; 
             }
             rcode = query_parse(pQuery);
             if ( rcode == -1)
             {
-                my_log("Error: Can't parse query in dispatch\n");
+                //my_log("Error: Can't parse query in dispatch\n");
                 //it should be freed here
-                querylist_free_item(&queries,num); 
+                querylist_free_item(&queries, num); 
                 continue;
             }
             long cAddr_h;

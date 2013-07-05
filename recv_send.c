@@ -240,16 +240,28 @@ int tcp_query_process(int sockfd)
 
     int clientSock = accept(sockfd, (SA*) &client_addr, &length); 
 
+/*
+//<<<<<<< HEAD
     struct linger ling;
     ling.l_onoff = 1;          
     ling.l_linger = 0; //TIMEOUT;
     setsockopt(clientSock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
-
+//=======
+//>>>>>>> f82c24e940bbdaa4be0bfabfbdae69810168a68c
+*/
     if( clientSock < 0)
     {
         my_log("Error on accept TCP connection from client\n");
         return -1;
     }
+
+    //Close socket right after close(), to  prevent TCP trap into TIME_WAIT state
+    struct linger ling;
+    ling.l_onoff = 1;          
+    ling.l_linger = 1; //TIMEOUT;
+    //setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+    setsockopt(clientSock, SOL_SOCKET, SO_LINGER, &ling, sizeof(ling));
+
     unsigned short lenRequest,bytes;
     bytes = readn(clientSock, &lenRequest, 2);
     if( bytes <2)
@@ -301,18 +313,21 @@ int forward_query_process(int sockfd)
         my_log("ERROR: Query num index error\n"); 
         return -1; 
     }
+    pthread_mutex_lock(&query_mutex[num]);
     Query * qr = queries.queries[num];
     if( qr == NULL)
     {
         my_log("Wierd: No query found  queries[%d]\n ", num);
+    	pthread_mutex_unlock(&query_mutex[num]);
+    	debug("Forward Query: Lock on %d released\n", num);
         return -1;
     }
     strProto = ((qr->from == TCP) ? "TCP":"UDP"); 
-
     my_log("Got %s query from:%s for: %s, len:%d, set to queries[%d]\n", 
             strProto, qr->str_client_addr, qr->qname,qr->queryLen, num); 
 
     Resolver *res = qr->resolver;
+    //TODO : multiple resolvers
 
     //modify query: change the txid to res->current_txid
     u_int16_t new_id = htons(res->current_txid);
@@ -333,6 +348,8 @@ int forward_query_process(int sockfd)
     if (res->current_txid == 0) // I don't like a zero id.
             res->current_txid =1;
     
+    pthread_mutex_unlock(&query_mutex[num]);
+    debug("Forward Query: Lock on %d released\n", num);
     return 0;
 }
 
@@ -378,6 +395,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
     {
         my_log("Warning: no query for this response, txid=%d\n", id);
         pthread_mutex_unlock(&query_mutex[idx]);
+    	debug("Lock on %d released\n", idx);
        return -1; 
     }
 
@@ -396,6 +414,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: Error on send reply to client , errno=%d, message:%s\n",
                     errno, strerror(errno));
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1; 
         }
         my_log("Sent UDP reply to client: %s for: %s , txid(c):%d, txid(s):%d, queries[%d].\n",
@@ -411,6 +430,7 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: write length of TCP response error\n");
                     close(qr->sockfd);
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1;
         }
         bytes = writen(qr->sockfd, response_buffer, responseLen); 
@@ -418,14 +438,18 @@ int reply_process(int sockfd, int udpServiceFd, int tcpServiceFd)
             my_log("Error: write TCP response error, client must have closed its socket.\n");
             close(qr->sockfd);
             pthread_mutex_unlock(&query_mutex[idx]);
+    	    debug("Lock on %d released\n", idx);
             return -1;
         }
         close(qr->sockfd);
         my_log("Sent TCP reply to client: %s for: %s , txid(c):%d, txid(s):%d, queries[%d]\n",
                 qr->str_client_addr, qr->qname, old_txid, id, idx);
     }
+    query_free(qr);
+    queries.queries[idx]=NULL;
     pthread_mutex_unlock(&query_mutex[idx]);
-    querylist_free_item(&queries, idx);
+    debug("Lock on %d released\n", idx);
+    //querylist_free_item(&queries, idx);
     
     return 0;
 } 
