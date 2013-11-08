@@ -328,9 +328,9 @@ picasaweb.google.com.hk
 picasaweb.l.google.com
 places.google.com
 play.google.com
-plus.google.com
-plusone.google.com
-plus.url.google.com
+#plus.google.com
+#plusone.google.com
+#plus.url.google.com
 productforums.google.com
 productideas.appspot.com
 profile.ak.facebook.com

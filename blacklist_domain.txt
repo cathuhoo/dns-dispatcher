@@ -76,7 +76,6 @@
 0z7586.info
 0zm65633.info
 0zs9x.info
-1.c.d
 1.usejump.com
 1003x.info
 100p252.info
@@ -8485,6 +8484,7 @@ plnznw.info
 plqutnukcy.info
 plsljb.info
 plus.google.com
+plusone.google.com
 pluzvz.info
 plviqm.info
 plxlnfyqu.info
@@ -12366,6 +12366,7 @@ xnqcykojf.info
 xnqkcpkz.info
 xnukhl.info
 xnwkitaksu.info
+xnxx.com
 xnzlnb.info
 xo87f9n9.info
 xobroyly.info
@@ -12804,7 +12805,6 @@ yourmana.sg1013.myweb.hinet.net
 yourprivatevpn.com
 yourprivatevpn.net
 youtube-ui-china.l.google.com
-<<<<<<< HEAD
 groups.google.com
 plus.google.com
 sites.google.com
@@ -13697,7 +13697,6 @@ ems18.your-freedom.de
 ems08.your-freedom.de
 ems28.your-freedom.de
 iqlinkus.com
-=======
 zyomzs.info
 zyukrqmvw.info
 zyumiie.info
@@ -13725,4 +13724,3 @@ zzvhlre.info
 zzxcty.info
 zzxqxjuwwh.info
 zzzcgrqtcey.info
->>>>>>> f82c24e940bbdaa4be0bfabfbdae69810168a68c

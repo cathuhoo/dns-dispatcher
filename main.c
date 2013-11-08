@@ -178,8 +178,6 @@ int main(int argc, char* argv[])
         exit(-1);
     }
     //config_display(&config);
-    if(config.daemonize) 
-        daemonize_init();
 
     if(config.file_resolvers)
     {
@@ -207,6 +205,8 @@ int main(int argc, char* argv[])
 
     if (!error)
     {
+	if(config.daemonize) 
+	    daemonize_init();
 
         signal(SIGTERM,signal_handler); // catch kill Terminate signal 
         signal(SIGINT,signal_handler); // catch kill Interrupt signal 
