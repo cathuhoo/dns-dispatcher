@@ -461,4 +461,3 @@ ytimg.l.google.com
 ytstatic.l.google.com
 zh-CN.facebook.com
 zh.wiktionary.org
-a.b.c.d

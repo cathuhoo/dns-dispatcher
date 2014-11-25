@@ -18,6 +18,8 @@
  *  Forward the reply to right client, according to the item in the query list, if any;
  */
 
+//#define  TCP_SERVICE
+
 static void * listen_thread_handler();
 
 pthread_t recv_send() 
@@ -39,7 +41,9 @@ static void * listen_thread_handler( )
     int i, num_resolvers;
 
     // Service: recieve DNS queries from Clients
-    int udpServiceFd, tcpServiceFd;
+    int udpServiceFd; 
+    int tcpServiceFd;
+
     struct sockaddr_in udpServiceAddr, tcpServiceAddr;
 
     udpServiceFd = CreateServerSocket(AF_INET, SOCK_DGRAM,  "0.0.0.0", config.service_port, 
@@ -49,7 +53,7 @@ static void * listen_thread_handler( )
         my_log("Cannot create socket for udp service, service port=%d\n", config.service_port);
         pthread_exit(NULL);
     }
-
+/*
     tcpServiceFd = CreateServerSocket(AF_INET, SOCK_STREAM, "0.0.0.0", config.tcpservice_port, 
                                      (SA *) &tcpServiceAddr);
     if(tcpServiceFd < 0) 
@@ -57,6 +61,9 @@ static void * listen_thread_handler( )
         my_log("Cannot create socket for tcp service, service port=%d\n", config.tcpservice_port);
         pthread_exit(NULL);
     }
+*/
+    tcpServiceFd = 0; // for disable TCP service
+
 
     //Connect to all the resolvers
     resolverSockFds =  malloc(sizeof (int) * resolvers.size);
@@ -137,7 +144,9 @@ static void * listen_thread_handler( )
 
        FD_ZERO(&read_fds);
        FD_SET(udpServiceFd,&read_fds);
-       FD_SET(tcpServiceFd,&read_fds);
+
+       //FD_SET(tcpServiceFd,&read_fds);
+
        for( i=0; i< num_resolvers; i ++)
           FD_SET( resolverSockFds[i], &read_fds);
 
@@ -160,11 +169,14 @@ static void * listen_thread_handler( )
         {
             udp_query_process(udpServiceFd);
         }
+	/*
         // Request from clients via TCP 
         if (FD_ISSET(tcpServiceFd, &read_fds) )
         {
             tcp_query_process(tcpServiceFd);
         }
+	*/
+
         // Request from upstream resolvers   
         for( i=0; i< num_resolvers; i ++)
         { 
